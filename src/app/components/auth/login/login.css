@@ -1,0 +1,130 @@
+/* Import shared styles if available */
+@import '../../../shared/styles/common.css';
+
+:host {
+  display: block;
+}
+
+.container {
+  background: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  width: 350px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  text-align: center;
+  margin: 40px auto;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+
+.input-box {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.password-input-group {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.eye-icon, .eye-off-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.eye-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/%3E%3C/svg%3E");
+}
+
+.eye-off-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21'/%3E%3C/svg%3E");
+}
+
+.link {
+  text-align: left;
+  font-size: 13px;
+  margin: 5px 0 15px 0;
+}
+
+.link a {
+  color: #0070ba;
+  text-decoration: none;
+}
+
+.btn-login {
+  width: 100%;
+  background: #0070ba; /* mantém o azul do dashboard */
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  color: #666;
+  font-size: 14px;
+  margin: 10px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid #ccc;
+  margin: 0 10px;
+}
+
+.btn-create {
+  width: 100%;
+  background: white;
+  color: black;
+  padding: 12px;
+  border: 2px solid black;
+  border-radius: 25px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.footer {
+  margin-top: 15px;
+  font-size: 13px;
+  color: #666;
+}
+
+.footer img {
+  width: 20px;
+  vertical-align: middle;
+}
+
+.lang {
+  margin-left: 5px;
+}

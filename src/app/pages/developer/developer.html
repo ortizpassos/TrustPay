@@ -1,0 +1,120 @@
+
+<div class="app">
+  <app-sidebar></app-sidebar>
+  <main class="main">
+    <header class="topbar" role="banner">
+      <button id="menuToggle" class="menu-btn" aria-label="Abrir menu" (click)="toggleSidebar()">☰</button>
+      
+      <div class="user-actions">
+        <button class="btn primary" (click)="sair()">Sair</button>
+      </div>
+    </header>
+    <section class="content" aria-live="polite">
+      <div class="dashboard-content">
+        <div class="dashboard-grid">
+          <!-- Card: Gerar Headers HMAC -->
+          <div class="dashboard-card">
+            <h2>Integração TrustPay (HMAC)</h2>
+            <p class="text-sm text-muted-foreground">Guia direto: gere os headers necessários e envie sua requisição.</p>
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit,minmax(220px,1fr));">
+              <div class="field">
+                <label>API Key</label>
+                <input class="form-input" [(ngModel)]="signApiKey" placeholder="ex.: key1" />
+              </div>
+              <div class="field">
+                <label>Secret</label>
+                <input type="password" class="form-input" [(ngModel)]="signSecret" placeholder="ex.: secret1" />
+              </div>
+              <div class="field">
+                <label>Method</label>
+                <select class="form-input" [(ngModel)]="signMethod">
+                  <option>GET</option>
+                  <option>POST</option>
+                  <option>PUT</option>
+                  <option>PATCH</option>
+                  <option>DELETE</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Path (sem query)</label>
+                <input class="form-input" [(ngModel)]="signPath" placeholder="/api/merchant/v1/payment-intents" />
+              </div>
+              <div class="field">
+                <label>Timestamp (epoch seconds)</label>
+                <div style="display:flex; gap:.5rem;">
+                  <input type="number" class="form-input" [(ngModel)]="signTimestamp" />
+                  <button class="btn-secondary" type="button" (click)="updateNowTimestamp()">Agora</button>
+                </div>
+              </div>
+              <div class="field" style="grid-column: 1 / -1;">
+                <label>Raw Body (JSON para POST)</label>
+                <textarea class="form-input" rows="6" [(ngModel)]="signBody" placeholder='{"orderId":"ORDER-1001",...}'></textarea>
+              </div>
+            </div>
+            <div class="actions" style="justify-content:flex-start; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn-primary" type="button" (click)="generateSignature()">Gerar headers</button>
+              <button class="btn-secondary" type="button" (click)="copyHeaders()" [disabled]="!headersText">Copiar headers</button>
+              <button class="btn-secondary" type="button" (click)="copyCurl()" [disabled]="!curlText">Copiar cURL</button>
+              <button class="btn-secondary" type="button" (click)="testarEndpoint()" [disabled]="!signSignatureHex">Testar endpoint</button>
+            </div>
+            <div *ngIf="testResult" style="margin-top:1rem">
+              <label class="form-label">Resultado do teste</label>
+              <pre class="code-block">{{ testResult | json }}</pre>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <div class="text-sm text-muted-foreground">Obrigatórios:</div>
+                <ul class="text-sm">
+                  <li><code>x-api-key</code>: sua chave pública</li>
+                  <li><code>x-timestamp</code>: epoch seconds</li>
+                  <li><code>x-signature</code>: HMAC-SHA256 em hex de <code>METHOD\nPATH\nTIMESTAMP\nRAW_BODY</code></li>
+                  <li><code>Content-Type</code>: <code>application/json</code> (para POST com JSON)</li>
+                </ul>
+              </div>
+              <div>
+                <label class="form-label">Headers gerados</label>
+                <pre class="code-block" [textContent]="headersText"></pre>
+              </div>
+              <div>
+                <label class="form-label">Payload assinado</label>
+                <pre class="code-block" [textContent]="signPayloadPreview"></pre>
+              </div>
+              <div>
+                <label class="form-label">Assinatura (hex)</label>
+                <div class="form-input" style="background:#f8fafc">{{ signSignatureHex || '—' }}</div>
+              </div>
+              <div>
+                <label class="form-label">cURL pronto</label>
+                <pre class="code-block" [textContent]="curlText"></pre>
+              </div>
+              <div class="alert alert-error" *ngIf="signError">{{ signError }}</div>
+            </div>
+          </div>
+          <!-- Card: Endpoints essenciais -->
+          <div class="dashboard-card">
+            <h2>Endpoints essenciais</h2>
+            <p class="text-sm text-muted-foreground">Base local: <code>http://localhost:3000/api/merchant/v1</code></p>
+            <ul class="text-sm">
+              <li><strong>POST</strong> <code>/payment-intents</code> — cria intenção</li>
+              <li><strong>POST</strong> <code>/payments/:id/capture</code> — captura cartão</li>
+              <li><strong>POST</strong> <code>/payments/:id/pix</code> — inicia PIX</li>
+              <li><strong>GET</strong> <code>/payments/:id/status</code> — status</li>
+              <li><strong>POST</strong> <code>/payments/:id/refund</code> — reembolso</li>
+            </ul>
+          </div>
+          <!-- Card: String de assinatura + exemplo Node -->
+          <div class="dashboard-card">
+            <h2>Formato da string a assinar</h2>
+            <pre class="code-block" [textContent]="signaturePayloadFormat"></pre>
+            <div class="space-y-3">
+              <div>
+                <label class="form-label">Exemplo (Node.js)</label>
+                <pre class="code-block" [textContent]="nodeSignExample"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>

@@ -1,0 +1,255 @@
+<div class="container">
+  <!-- Mensagem de sucesso curta -->
+  @if (sucessoMsg) {
+    <div class="alert alert-success fade-in">
+      <div class="alert-icon success-icon"></div>
+      <span>{{ sucessoMsg }}</span>
+    </div>
+  }
+    <div class="alert-icon success-icon"></div>
+    <span>{{ sucessoMsg }}</span>
+  </div>
+
+  @if (!sucessoMsg) {
+  <div class="register-header">
+    <h2 class="register-title">Criar nova conta</h2>
+    <p class="register-subtitle">Cadastre-se para salvar seus cartões e facilitar pagamentos futuros</p>
+  </div>
+
+  <!-- Erro geral -->
+    @if (erroGeral) {
+      <div class="alert alert-error">
+        <div class="alert-icon error-icon"></div>
+        <span>{{ erroGeral }}</span>
+      </div>
+    }
+    <div class="alert-icon error-icon"></div>
+    <span>{{ erroGeral }}</span>
+
+
+  <form (ngSubmit)="onSubmit()" class="register-form">
+    <!-- Tipo de Conta -->
+    <div class="form-group">
+      <label for="accountType" class="form-label">Tipo de Conta *</label>
+      <select id="accountType" name="accountType" [(ngModel)]="dadosCadastro.accountType" required class="form-input">
+        <option value="loja">Loja (e-commerce, empresa)</option>
+        <option value="pessoa_fisica">Pessoa Física</option>
+      </select>
+      @if (erros['accountType']) {
+        <span class="error-message">{{ erros['accountType'] }}</span>
+      }
+    </div>
+    <!-- Nome e Sobrenome -->
+    <div class="form-row">
+      <div class="form-group">
+        <label for="firstName" class="form-label">Nome *</label>
+        <input
+          id="firstName"
+          type="text"
+          placeholder="Seu nome"
+          [(ngModel)]="dadosCadastro.firstName"
+          (input)="onInputChange('firstName')"
+          [class]="'form-input ' + (erros['firstName'] ? 'input-error' : '')"
+          name="firstName"
+          autocomplete="given-name"
+        />
+        @if (erros['firstName']) {
+          <span class="error-message">{{ erros['firstName'] }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="lastName" class="form-label">Sobrenome *</label>
+        <input
+          id="lastName"
+          type="text"
+          placeholder="Seu sobrenome"
+          [(ngModel)]="dadosCadastro.lastName"
+          (input)="onInputChange('lastName')"
+          [class]="'form-input ' + (erros['lastName'] ? 'input-error' : '')"
+          name="lastName"
+          autocomplete="family-name"
+        />
+        @if (erros['lastName']) {
+          <span class="error-message">{{ erros['lastName'] }}</span>
+        }
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="form-group">
+      <label for="email" class="form-label">Email *</label>
+      <input
+        id="email"
+        type="email"
+        placeholder="seu@email.com"
+        [(ngModel)]="dadosCadastro.email"
+        (input)="onInputChange('email')"
+        [class]="'form-input ' + (erros['email'] ? 'input-error' : '')"
+        name="email"
+        autocomplete="email"
+      />
+      @if (erros['email']) {
+        <span class="error-message">{{ erros['email'] }}</span>
+      }
+    </div>
+
+    <!-- Telefone e CPF -->
+    <div class="form-row">
+      <div class="form-group">
+        <label for="phone" class="form-label">Telefone</label>
+        <input
+          id="phone"
+          type="tel"
+          placeholder="(11) 99999-9999"
+          [(ngModel)]="dadosCadastro.phone"
+          (input)="onInputChange('phone')"
+          [class]="'form-input ' + (erros['phone'] ? 'input-error' : '')"
+          name="phone"
+          autocomplete="tel"
+        />
+        @if (erros['phone']) {
+          <span class="error-message">{{ erros['phone'] }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="document" class="form-label">CPF</label>
+        <input
+          id="document"
+          type="text"
+          placeholder="000.000.000-00"
+          [(ngModel)]="dadosCadastro.document" [ngModelOptions]="{standalone: true}"
+          (input)="onInputChange('document')"
+          [class]="'form-input ' + (erros['document'] ? 'input-error' : '')"
+          name="document"
+          maxlength="14"
+        />
+        @if (erros['document']) {
+          <span class="error-message">{{ erros['document'] }}</span>
+        }
+      </div>
+    </div>
+
+    <!-- Senha -->
+    <div class="form-group">
+      <label for="password" class="form-label">Senha *</label>
+      <div class="password-input-group">
+        <input
+          id="password"
+          [type]="mostrarSenha ? 'text' : 'password'"
+          placeholder="Sua senha"
+          [(ngModel)]="dadosCadastro.password" [ngModelOptions]="{standalone: true}"
+          (input)="onInputChange('password')"
+          [class]="'form-input ' + (erros['password'] ? 'input-error' : '')"
+          name="password"
+          autocomplete="new-password"
+        />
+        <button
+          type="button"
+          class="password-toggle"
+          (click)="togglePasswordVisibility()"
+        >
+          <div [class]="mostrarSenha ? 'eye-off-icon' : 'eye-icon'"></div>
+        </button>
+      </div>
+      
+      <!-- Indicador de força da senha -->
+      @if (dadosCadastro.password) {
+        <div class="password-strength">
+          <div class="strength-bar">
+            <div [class]="'strength-fill ' + getPasswordStrength()"></div>
+          </div>
+          <span [class]="'strength-text ' + getPasswordStrength()">
+            {{ getPasswordStrength() === 'weak' ? 'Fraca' : 
+               getPasswordStrength() === 'medium' ? 'Média' : 'Forte' }}
+          </span>
+        </div>
+      }
+        <div class="strength-bar">
+          <div [class]="'strength-fill ' + getPasswordStrength()"></div>
+        </div>
+        <span [class]="'strength-text ' + getPasswordStrength()">
+          {{ getPasswordStrength() === 'weak' ? 'Fraca' : 
+             getPasswordStrength() === 'medium' ? 'Média' : 'Forte' }}
+        </span>
+      </div>
+      
+      @if (erros['password']) {
+        <span class="error-message">{{ erros['password'] }}</span>
+      }
+  
+
+    <!-- Confirmar Senha -->
+    <div class="form-group">
+      <label for="confirmPassword" class="form-label">Confirmar Senha *</label>
+      <div class="password-input-group">
+        <input
+          id="confirmPassword"
+          [type]="mostrarConfirmarSenha ? 'text' : 'password'"
+          placeholder="Confirme sua senha"
+          [(ngModel)]="confirmarSenha"
+          (input)="onInputChange('confirmPassword')"
+          [class]="'form-input ' + (erros['confirmPassword'] ? 'input-error' : '')"
+          name="confirmPassword"
+          autocomplete="new-password"
+        />
+        <button
+          type="button"
+          class="password-toggle"
+          (click)="toggleConfirmPasswordVisibility()"
+        >
+          <div [class]="mostrarConfirmarSenha ? 'eye-off-icon' : 'eye-icon'"></div>
+        </button>
+      </div>
+      @if (erros['confirmPassword']) {
+        <span class="error-message">{{ erros['confirmPassword'] }}</span>
+      }
+    </div>
+
+    <!-- Termos -->
+    <div class="form-group">
+      <div class="checkbox-group">
+        <input
+          id="acceptTerms"
+          type="checkbox"
+          [(ngModel)]="aceitarTermos"
+          (change)="onInputChange('terms')"
+          [class]="'form-checkbox ' + (erros['terms'] ? 'checkbox-error' : '')"
+          name="acceptTerms"
+        />
+        <label for="acceptTerms" class="checkbox-label">
+          Aceito os <a href="/terms" target="_blank" class="link">termos de uso</a> 
+          e <a href="/privacy" target="_blank" class="link">política de privacidade</a>
+        </label>
+      </div>
+      @if (erros['terms']) {
+        <span class="error-message">{{ erros['terms'] }}</span>
+      }
+    </div>
+
+    <!-- Botão de registro -->
+    <button
+      type="submit"
+      class="btn-register"
+      [disabled]="carregando"
+    >
+      @if (carregando) {
+        <div class="spinner-small"></div>
+      }
+      <span>{{ carregando ? 'Criando conta...' : 'Criar conta' }}</span>
+    </button>
+  </form>
+
+  <!-- Link para login -->
+  <div class="switch-auth">
+    <span>Já tem uma conta? </span>
+    <button
+      type="button"
+      class="switch-link"
+      (click)="onSwitchToLogin()"
+    >
+      Entrar
+    </button>
+  </div>
+  }

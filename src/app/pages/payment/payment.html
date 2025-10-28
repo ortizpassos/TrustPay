@@ -1,0 +1,153 @@
+<div class="payment-container">
+  <!-- Estado de Carregamento -->
+  @if (isLoading) {
+  <div class="loading-wrapper">
+    <div class="payment-card">
+      <div class="payment-header">
+        <h1 class="payment-title">Sistema de Pagamentos</h1>
+        <p class="payment-subtitle">Carregando dados da transação...</p>
+      </div>
+      <div class="payment-content text-center">
+        <div class="spinner-large"></div>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Estado de Erro -->
+  @if (error && !isLoading) {
+  <div class="error-wrapper">
+    <div class="payment-card">
+      <div class="payment-header">
+        <h1 class="payment-title">Erro</h1>
+        <p class="payment-subtitle">Ocorreu um problema</p>
+      </div>
+      <div class="payment-content text-center">
+        <div class="alert alert-error">
+          <span class="icon icon-sm error-icon"></span>
+          {{ error }}
+        </div>
+        <button class="btn-primary w-full" (click)="goBack()">
+          Voltar ao Início
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Resultado do Pagamento -->
+  @if (showResult && !isLoading) {
+    <app-payment-result
+      [transaction]="paymentResult!"
+      [isSuccess]="paymentResult?.status === 'APPROVED'"
+      [errorMessage]="resultError">
+    </app-payment-result>
+  }
+
+  <!-- Formulários de Pagamento -->
+  @if (transaction && !showResult && !isLoading) {
+  <div class="payment-card">
+    <div class="payment-header">
+      <h1 class="payment-title">Finalizar Pagamento</h1>
+      <p class="payment-subtitle">Complete os dados para processar seu pagamento</p>
+    </div>
+
+  <!-- Resumo da Transação -->
+    <div class="payment-content">
+      <div class="space-y-4">
+        <div class="grid gap-3">
+          <div class="flex items-center justify-between p-4 border rounded-lg">
+            <span class="text-sm text-muted-foreground">Valor Total:</span>
+            <span class="font-semibold">
+              {{ paymentService.formatCurrency(transaction.amount, transaction.currency) }}
+            </span>
+          </div>
+          @if (transaction.baseAmount && transaction.installments?.mode==='PARCELADO') {
+          <div class="flex items-center justify-between p-4 border rounded-lg">
+            <span class="text-sm text-muted-foreground">Valor Original:</span>
+            <span class="font-semibold">
+              {{ paymentService.formatCurrency(transaction.baseAmount, transaction.currency) }}
+            </span>
+          </div>
+          }
+          @if (transaction.installments) {
+          <div class="flex flex-col gap-1 p-4 border rounded-lg">
+            <span class="text-sm text-muted-foreground">Parcelamento:</span>
+            @if (transaction.installments.mode==='AVISTA') {
+              <span class="font-semibold">À vista (sem juros)</span>
+            }
+            @if (transaction.installments.mode==='PARCELADO') {
+              <span class="font-semibold">{{ transaction.installments.quantity }}x de {{ paymentService.formatCurrency(transaction.installments.installmentValue, transaction.currency) }} (Total {{ paymentService.formatCurrency(transaction.installments.totalWithInterest, transaction.currency) }})</span>
+              <span class="text-xs text-muted-foreground">Juros: {{ (transaction.installments.interestMonthly * 100) | number:'1.0-2' }}% a.m.</span>
+            }
+          </div>
+          }
+          <div class="flex items-center justify-between p-4 border rounded-lg">
+            <span class="text-sm text-muted-foreground">Pedido:</span>
+            <span class="font-semibold">#{{ transaction.orderId }}</span>
+          </div>
+          <div class="flex items-center justify-between p-4 border rounded-lg">
+            <span class="text-sm text-muted-foreground">Método:</span>
+            <span class="font-semibold">
+              {{ transaction.paymentMethod === 'credit_card' ? 'Cartão de Crédito' : 'PIX' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+  <!-- Seleção de Método de Pagamento (se necessário) -->
+    @if (false) {
+    <div class="payment-method-selector">
+      <div class="method-options">
+        <button 
+          class="method-option"
+          [class.active]="transaction?.paymentMethod === 'credit_card'"
+          (click)="selectPaymentMethod('credit_card')">
+          <div class="method-icon credit-card-icon"></div>
+          <span>Cartão de Crédito</span>
+        </button>
+        
+        <button 
+          class="method-option"
+          [class.active]="transaction?.paymentMethod === 'pix'"
+          (click)="selectPaymentMethod('pix')">
+          <div class="method-icon pix-icon"></div>
+          <span>PIX</span>
+        </button>
+      </div>
+    </div>
+    }
+
+  <!-- Formulários de Pagamento -->
+    <div class="payment-forms">
+  <!-- Formulário de Cartão de Crédito -->
+      @if (transaction.paymentMethod === 'credit_card') {
+        <app-credit-card-form 
+          [transaction]="transaction"
+          (success)="onPaymentSuccess($event)"
+          (error)="onPaymentError($event)">
+        </app-credit-card-form>
+      }
+
+  <!-- Pagamento PIX -->
+      @if (transaction.paymentMethod === 'pix') {
+        <app-pix-payment 
+          [transaction]="transaction"
+          (success)="onPaymentSuccess($event)"
+          (error)="onPaymentError($event)">
+        </app-pix-payment>
+      }
+    </div>
+
+  <!-- Aviso de Segurança -->
+    <div class="security-notice">
+      <div class="security-icon"></div>
+      <div class="security-text">
+        <p><strong>Suas informações estão protegidas</strong></p>
+        <p>Utilizamos criptografia SSL de 256 bits para garantir a segurança dos seus dados.</p>
+      </div>
+    </div>
+    </div>
+  </div>
+  }
+</div>

@@ -1,0 +1,127 @@
+<div class="app">
+  <app-sidebar></app-sidebar>
+  <main class="main">
+    <header class="topbar" role="banner">
+      <button id="menuToggle" class="menu-btn" aria-label="Abrir menu" (click)="toggleSidebar()">☰</button>
+       
+    </header>
+
+    <section class="content" aria-live="polite">
+      <div *ngIf="usuario()?.accountType === 'loja'" class="welcome-merchant">
+        <strong>Bem vindo a TrustPay Logista</strong>
+      </div>
+      <div class="dashboard-content">
+        <div class="dashboard-grid">
+      <!-- Informações do Usuário -->
+  <div class="dashboard-card" *ngIf="usuario() as u">
+        <h2>Perfil</h2>
+        <div class="user-info">
+          <div class="user-avatar">
+            <span>{{ iniciais() }}</span>
+          </div>
+          <div class="user-details">
+            <h3>{{ u.firstName }} {{ u.lastName }}</h3>
+            <p>{{ u.email }}</p>
+            <p *ngIf="u.phone">{{ u.phone }}</p>
+            <p class="verify-status" [class.verified]="u.isEmailVerified">
+              {{ u.isEmailVerified ? 'Email verificado' : 'Email não verificado' }}
+            </p>
+          </div>
+        </div>
+  <button type="button" class="btn-secondary" (click)="editarPerfil()">Editar Perfil</button>
+      </div>
+
+      <!-- Cartões Salvos -->
+      <div class="dashboard-card">
+        <h2>Cartões Salvos</h2>
+  <div *ngIf="carregandoCartoes(); else cardsBlock">Carregando...</div>
+        <ng-template #cardsBlock>
+          <div class="saved-cards empty" *ngIf="cartoes().length === 0 && !mostrarFormularioNovoCartao()">
+            <p class="empty-text">Nenhum cartão salvo ainda.</p>
+          </div>
+          <div class="saved-cards" *ngIf="cartoes().length > 0">
+            <div class="card-item" *ngFor="let c of cartoes()">
+              <div class="card-info">
+                <span class="card-brand">{{ c.cardBrand | uppercase }} <span *ngIf="c.isDefault" class="default-badge">Padrão</span></span>
+                <span class="card-number">•••• •••• •••• {{ c.lastFourDigits }}</span>
+                <span class="card-exp">Exp: {{ c.expirationMonth }}/{{ c.expirationYear }}</span>
+              </div>
+              <div class="card-actions">
+                <button type="button" class="btn-mini" (click)="definirPadrao(c)" [disabled]="definindoPadraoId()===c.id || c.isDefault">
+                  {{ definindoPadraoId()===c.id ? '...' : c.isDefault ? 'Padrão' : 'Definir' }}
+                </button>
+                <button type="button" class="btn-remove" (click)="removerCartao(c)" [disabled]="removendoCartaoId()===c.id">
+                  {{ removendoCartaoId()===c.id ? '...' : 'Remover' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+        <div *ngIf="mostrarFormularioNovoCartao()" class="add-card-form">
+          <h3>Novo Cartão</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label>Número</label>
+              <input type="text" [(ngModel)]="novoCartao().cardNumber" name="cardNumber" (input)="formatarNumeroCartaoInput()" placeholder="#### #### #### ####" />
+            </div>
+            <div class="field">
+              <label>Nome Impresso</label>
+              <input type="text" [(ngModel)]="novoCartao().cardHolderName" name="cardHolderName" placeholder="EX: JOAO SILVA" />
+            </div>
+            <div class="field small">
+              <label>Mês</label>
+              <input type="text" maxlength="2" [(ngModel)]="novoCartao().expirationMonth" name="expirationMonth" placeholder="MM" />
+            </div>
+            <div class="field small">
+              <label>Ano</label>
+              <input type="text" maxlength="4" [(ngModel)]="novoCartao().expirationYear" name="expirationYear" placeholder="AAAA" />
+            </div>
+            <div class="field small">
+              <label>CVV</label>
+              <input type="password" maxlength="4" [(ngModel)]="novoCartao().cvv" name="cvv" placeholder="***" />
+            </div>
+            <div class="field inline">
+              <label>
+                <input type="checkbox" [(ngModel)]="novoCartao().isDefault" name="isDefault" /> Padrão
+              </label>
+            </div>
+          </div>
+          <div class="card-errors" *ngIf="errosCartao().length > 0">
+            <div class="error-line" *ngFor="let e of errosCartao()">{{ e }}</div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn-secondary" (click)="mostrarFormularioNovoCartao.set(false)" [disabled]="salvandoCartao()">Cancelar</button>
+            <button type="button" class="btn-primary" (click)="enviarNovoCartao()" [disabled]="salvandoCartao()">{{ salvandoCartao() ? 'Salvando...' : 'Salvar Cartão' }}</button>
+          </div>
+        </div>
+        <button *ngIf="!mostrarFormularioNovoCartao()" type="button" class="btn-secondary" (click)="abrirFormularioNovoCartao()">Adicionar Cartão</button>
+      </div>
+
+      <!-- Transações Recentes -->
+      <div class="dashboard-card full-width">
+        <h2>Transações Recentes</h2>
+        <div *ngIf="carregandoTransacoes(); else listaTransacoes">Carregando...</div>
+        <ng-template #listaTransacoes>
+          <div class="transactions-list" *ngIf="transacoesRecentes().length > 0; else vazioTransacoes">
+            <div class="transaction-item" *ngFor="let t of transacoesRecentes()">
+              <div class="transaction-info">
+                <span class="transaction-description">{{ descricaoTransacao(t) }}</span>
+                <span class="transaction-date">{{ t.createdAt | date:'dd/MM/AAAA HH:mm' }}</span>
+              </div>
+              <span class="transaction-amount">{{ paymentService.formatCurrency(t.amount, t.currency) }}</span>
+              <span class="transaction-status" [class]="'transaction-status ' + statusClass(t.status)">{{ formatStatus(t.status) }}</span>
+            </div>
+          </div>
+          <ng-template #vazioTransacoes>
+            <p class="empty-text">Nenhuma transação recente.</p>
+          </ng-template>
+        </ng-template>
+        <button type="button" class="btn-secondary" (click)="router.navigate(['/transacoes'])">Ver Todas</button>
+      </div>
+
+      <!-- Ações Rápidas moved to sidebar -->
+    </div>
+  </div>
+    </section>
+  </main>
+</div>

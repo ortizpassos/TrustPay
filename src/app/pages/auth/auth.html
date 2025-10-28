@@ -1,0 +1,16 @@
+   
+    <div class="auth-content">
+      @if (isLoginMode) {
+        <app-login 
+          (loginSuccess)="onLoginSuccess()"
+          (switchToRegister)="toggleMode()"
+          [successMessage]="postRegisterMsg">
+        </app-login>
+      }
+      @if (!isLoginMode) {
+        <app-register 
+          (registerSuccess)="onRegisterSuccess()"
+          (switchToLogin)="toggleMode()">
+        </app-register>
+      }
+    </div>

@@ -1,0 +1,80 @@
+.sidebar{
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  height: 100vh;
+  overflow-y: auto;
+  width:260px;
+  background:linear-gradient(180deg,#072a50 0%, #08355f 100%);
+  color:#fff;
+  padding:20px;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:18px}
+.logo{width:44px;height:44px;border-radius:8px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:20px;text-decoration:none;color:inherit}
+.brand-text h1{margin:0;font-size:18px}
+.brand-text p{margin:0;font-size:13px;opacity:0.9}
+/* Sidebar brand accent (standard across pages) */
+.sidebar .brand-text p {
+  color: #ec8f0d;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+}
+.nav ul{list-style:none;padding:0;margin:18px 0}
+.nav a{display:block;padding:10px 12px;color:rgba(255,255,255,0.9);text-decoration:none;border-radius:8px}
+.main{flex:1;padding:18px; margin-left:260px}
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.menu-btn{display:none;background:transparent;border:0;font-size:20px}
+
+.user-actions{margin-left:auto;display:flex;gap:8px}
+.btn{padding:8px 12px;border-radius:8px;border:0;background:#e6eef9;color:#072a50;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{background:transparent;border:1px solid #e6e9ef}
+.content{max-width:1100px;margin:0 auto}
+
+/* Sidebar-specific quick action styles */
+.sidebar-actions{margin-top:18px; display:flex; flex-direction:column; flex:1}
+.sidebar-actions .quick-actions{display:flex;flex-direction:column;gap:10px; flex:1}
+.sidebar-actions .quick-action-btn{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:rgba(255,255,255,0.04);
+  color:#fff;
+  border:1px solid rgba(255,255,255,0.06);
+  cursor:pointer;
+}
+.sidebar-actions .quick-action-btn:hover{ background:rgba(255,255,255,0.06); transform:translateY(-1px) }
+.sidebar-actions .action-icon{font-size:18px}
+
+/* Active item highlight */
+.sidebar-actions .quick-action-btn.active{
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: inset 2px 0 0 0 #00b6e6;
+}
+
+
+/* Developer button alignment reuse quick-action style */
+.dev-btn{width:100%; text-align:left; justify-content:flex-start;}
+
+/* Sidebar quick actions */
+.sidebar-actions{margin-top:18px}
+.sidebar-actions .quick-actions{display:flex;flex-direction:column;gap:8px; flex:1}
+.sidebar-actions .quick-action-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#fff;padding:10px;border-radius:10px;display:flex;align-items:center;gap:10px;text-decoration:none}
+.sidebar-actions .quick-action-btn:hover{background:rgba(255,255,255,0.04)}
+.sidebar-actions .action-icon{font-size:18px}
+
+/* Dashboard specific tweaks (keep original naming) */
+.dashboard-content{padding:2rem}
+.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:1.5rem}
+
+.dashboard-card{background:var(--card);border:1px solid #e5e7eb;border-radius:0.5rem;padding:1.5rem;box-shadow:var(--shadow)}
+
+.dashboard-card.full-width{grid-column:1 / -1}
+
+.dashboard-card h2{margin:0 0 1.5rem 0;font-size:1.25rem;font-weight:600;color:#111827}

@@ -1,0 +1,37 @@
+<div class="app">
+  <app-sidebar></app-sidebar>
+  <main class="main">
+    <header class="topbar" role="banner">
+      <button id="menuToggle" class="menu-btn" aria-label="Abrir menu">☰</button>
+    </header>
+    <section class="content" aria-live="polite">
+      <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+          Integração TrustPay para E-commerce
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <ol class="mb-3">
+              <li>Para integrar o TrustPay à sua loja, gere suas chaves merchant na página de configurações.</li>
+              <li>Configure as variáveis de ambiente no backend do seu e-commerce:
+                <pre class="bg-light p-2 border rounded">TRUSTPAY_MERCHANT_KEY=[sua chave]
+TRUSTPAY_MERCHANT_SECRET=[seu secret]</pre>
+              </li>
+              <li>Consulte a <a href="https://docs.trustpay.com/api" target="_blank">Documentação TrustPay API</a> para autenticação e pagamentos.</li>
+              <li>Exemplo de chamada autenticada:
+                  <pre class="bg-light p-2 border rounded">POST /api/merchant/v1/payment
+  Headers:
+    x-merchant-key: [sua chave]
+    x-merchant-signature: &lt;HMAC gerado&gt;
+  Body:
+    ...dados do pagamento...
+                  </pre>
+                </li>
+            </ol>
+            <p class="text-muted">Em caso de dúvidas, consulte o suporte ou a documentação oficial.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>

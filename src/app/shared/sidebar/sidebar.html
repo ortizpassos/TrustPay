@@ -1,0 +1,22 @@
+<aside class="sidebar" [class.open]="sidebarOpen" aria-label="Navegação principal" role="navigation">
+  <div class="brand">
+    <a class="logo" [routerLink]="['/dashboard']" aria-label="Ir para Dashboard">🏠</a>
+    <div class="brand-text">
+      <h1>TrustPay</h1>
+      <p>{{ user?.sidebarTitle || 'Menu' }}</p>
+    </div>
+  </div>
+  <div class="sidebar-actions">
+    <div class="quick-actions">
+      <a class="quick-action-btn" [routerLink]="['/minha-conta']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="action-icon">🧾</span><span>Minha Conta</span></a>
+      <a class="quick-action-btn" [routerLink]="['/novo-pagamento']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeSidebarOnNavigate()"><span class="action-icon">💳</span><span>Novo Pagamento</span></a>
+      <a class="quick-action-btn" [routerLink]="['/relatorios']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeSidebarOnNavigate()"><span class="action-icon">📊</span><span>Relatórios</span></a>
+      <a class="quick-action-btn" [routerLink]="['/integrate']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="action-icon">💳</span><span>Integrar Loja</span></a>
+      <a class="quick-action-btn" [routerLink]="['/carteira']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="action-icon">👛</span><span>Carteira</span></a>
+      <a class="quick-action-btn" [routerLink]="['/desenvolvedor']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="action-icon">🛠️</span><span>Developer</span></a>
+      <a class="quick-action-btn" [routerLink]="['/configuracoes']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="action-icon">⚙️</span><span>Configurações</span></a>
+      <button type="button" class="quick-action-btn" (click)="sair()"><span class="action-icon">🚪</span><span>Sair</span></button>
+      <img class="sidebar-gif" [src]="user?.accountType === 'loja' ? '/assets/sidloja.gif' : '/assets/card.gif'" alt="TrustPay animation" loading="lazy" />
+    </div>
+  </div>
+</aside>

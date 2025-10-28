@@ -1,0 +1,457 @@
+@import '../../shared/styles/common.css';
+
+:root{
+  --bg:#f6f7fb;
+  --card:#ffffff;
+  --muted:#6b7280;
+  --accent:#0070ba;
+  --radius:10px;
+  --shadow:0 6px 18px rgba(19,24,33,0.08);
+}
+
+/* Layout from Home (TrustPay) */
+.app{display:flex;min-height:100vh;background:var(--bg)}
+/* Fixed sidebar on desktop */
+.sidebar{
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  height: 100vh;
+  overflow-y: auto;
+  width:260px;
+  background:linear-gradient(180deg,#072a50 0%, #08355f 100%);
+  color:#fff;
+  padding:20px;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:18px}
+.logo{width:44px;height:44px;border-radius:8px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:20px;text-decoration:none;color:inherit}
+.brand-text h1{margin:0;font-size:18px}
+.brand-text p{margin:0;font-size:13px;opacity:0.9}
+/* Sidebar brand accent (standard across pages) */
+.sidebar .brand-text p {
+  color: #ec8f0d;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+}
+.nav ul{list-style:none;padding:0;margin:18px 0}
+.nav a{display:block;padding:10px 12px;color:rgba(255,255,255,0.9);text-decoration:none;border-radius:8px}
+.main{flex:1;padding:18px; margin-left:260px}
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.menu-btn{display:none;background:transparent;border:0;font-size:20px}
+
+.user-actions{margin-left:auto;display:flex;gap:8px}
+.btn{padding:8px 12px;border-radius:8px;border:0;background:#e6eef9;color:#072a50;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{background:transparent;border:1px solid #e6e9ef}
+.content{max-width:1100px;margin:0 auto}
+
+/* Sidebar-specific quick action styles */
+.sidebar-actions{margin-top:18px; display:flex; flex-direction:column; flex:1}
+.sidebar-actions .quick-actions{display:flex;flex-direction:column;gap:10px; flex:1}
+.sidebar-actions .quick-action-btn{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:rgba(255,255,255,0.04);
+  color:#fff;
+  border:1px solid rgba(255,255,255,0.06);
+  cursor:pointer;
+}
+.sidebar-actions .quick-action-btn:hover{ background:rgba(255,255,255,0.06); transform:translateY(-1px) }
+.sidebar-actions .action-icon{font-size:18px}
+
+/* Active item highlight */
+.sidebar-actions .quick-action-btn.active{
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: inset 2px 0 0 0 #00b6e6;
+}
+
+
+/* Developer button alignment reuse quick-action style */
+.dev-btn{width:100%; text-align:left; justify-content:flex-start;}
+
+/* Sidebar quick actions */
+.sidebar-actions{margin-top:18px}
+.sidebar-actions .quick-actions{display:flex;flex-direction:column;gap:8px; flex:1}
+.sidebar-actions .quick-action-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#fff;padding:10px;border-radius:10px;display:flex;align-items:center;gap:10px;text-decoration:none}
+.sidebar-actions .quick-action-btn:hover{background:rgba(255,255,255,0.04)}
+.sidebar-actions .action-icon{font-size:18px}
+
+/* Dashboard specific tweaks (keep original naming) */
+.dashboard-content{padding:2rem}
+.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:1.5rem}
+
+.dashboard-card{background:var(--card);border:1px solid #e5e7eb;border-radius:0.5rem;padding:1.5rem;box-shadow:var(--shadow)}
+
+.dashboard-card.full-width{grid-column:1 / -1}
+
+.dashboard-card h2{margin:0 0 1.5rem 0;font-size:1.25rem;font-weight:600;color:#111827}
+
+/* Perfil do Usuário */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.user-avatar {
+  width: 3.5rem;
+  height: 3.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.user-details h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.user-details p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.verify-status {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background: #fef3c7;
+  color: #92400e;
+  display: inline-block;
+}
+.verify-status.verified {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Cartões Salvos */
+.saved-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.saved-cards.empty {
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.5rem;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+}
+.empty-text {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.card-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-end;
+}
+
+.btn-mini {
+  padding: 0.25rem 0.5rem;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #3730a3;
+  border-radius: 0.25rem;
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+.btn-mini:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-mini:hover:not(:disabled) { background: #e0e7ff; }
+
+.default-badge {
+  background: #d1fae5;
+  color: #047857;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.375rem;
+  font-size: 0.55rem;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+  font-weight: 600;
+}
+
+.card-brand {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.card-number {
+  font-size: 0.875rem;
+  color: #1f2937;
+  font-family: monospace;
+}
+
+.btn-remove {
+  padding: 0.25rem 0.75rem;
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-remove:hover {
+  background-color: #fecaca;
+}
+
+/* Transações */
+.transactions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.transaction-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.transaction-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.transaction-description {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.transaction-date {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.transaction-amount {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.transaction-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.transaction-status.success {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.transaction-status.pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+/* Ações Rápidas */
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.quick-action-btn:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.action-icon {
+  font-size: 1.25rem;
+}
+
+/* Sidebar decorative GIF */
+.sidebar-gif {
+  margin-top: auto;
+  width: 100%;
+  border-radius: 8px;
+  
+  display: block;
+}
+
+/* Botões Secundários */
+.btn-secondary {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  background-color: #f8fafc;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #f1f5f9;
+  border-color: #9ca3af;
+}
+
+.btn-primary {
+  padding: 0.625rem 1rem;
+  background-color: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .2s;
+}
+.btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.add-card-form {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: #f8fafc;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.add-card-form h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.field { display: flex; flex-direction: column; gap: 0.25rem; }
+.field.small input { max-width: 80px; }
+.field label { font-size: 0.65rem; font-weight: 600; color: #475569; text-transform: uppercase; }
+.field input[type='text'], .field input[type='password'] {
+  padding: 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  background: #fff;
+}
+.field input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb22; }
+
+.card-errors { margin-bottom: 0.75rem; }
+.error-line { font-size: 0.65rem; color: #b91c1c; background: #fee2e2; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+
+.actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 1rem;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .dashboard-content {
+    padding: 1rem;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-card {
+    padding: 1rem;
+  }
+  
+  .transaction-item {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .user-info {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+/* Mobile sidebar toggle (shared) */
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    z-index: 100;
+    width: 240px;
+    transform: translateX(-100%);
+    transition: transform .3s ease;
+    box-shadow: 2px 0 16px rgba(0,0,0,0.08);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; padding: 12px; }
+  .topbar { flex-direction: column; gap: 8px; }
+  .menu-btn { display: inline-block; }
+}

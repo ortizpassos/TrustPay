@@ -1,0 +1,4 @@
+@import '../dashboard/dashboard.css';
+
+.placeholder-box { margin-top: 1rem; padding: 1.25rem; border: 1px dashed #888; border-radius: 8px; background: #fafafa; }
+.placeholder-box p { margin: 0; color: #555; font-size: .95rem; }

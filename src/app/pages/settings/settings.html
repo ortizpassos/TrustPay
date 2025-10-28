@@ -1,0 +1,48 @@
+
+
+
+  <main class="main">
+    <header class="topbar" role="banner">
+      <button id="menuToggle" class="menu-btn" aria-label="Abrir menu" (click)="toggleSidebar()">☰</button>
+       
+    </header>
+
+    <section class="content" aria-live="polite">
+
+<div class="app">
+  <app-sidebar [sidebarOpen]="sidebarOpen" [user]="user"></app-sidebar>
+  <main class="main">
+  <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+    <h2 class="mb-4">Configurações da Conta</h2>
+    <!-- Mensagens de feedback -->
+    <div class="alert alert-primary mb-4" role="alert">
+      <strong>Configurações da sua loja TrustPay</strong>
+    </div>
+    <div class="card">
+      <div class="card-header">Dados da Conta</div>
+      <div class="card-body">
+        <form (ngSubmit)="onSubmit()" #settingsForm="ngForm">
+          <div class="mb-3">
+            <label class="form-label">Nome:</label>
+            <input class="form-control" [(ngModel)]="user.firstName" name="firstName" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Sobrenome:</label>
+            <input class="form-control" [(ngModel)]="user.lastName" name="lastName" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email:</label>
+            <input class="form-control" [(ngModel)]="user.email" name="email" required type="email" readonly />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Telefone:</label>
+            <input class="form-control" [(ngModel)]="user.phone" name="phone" />
+          </div>
+          <button class="btn btn-success" type="submit">Salvar Alterações</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  
+  
