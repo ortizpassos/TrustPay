@@ -1,0 +1,49 @@
+<div class="app"></div>
+  <app-sidebar [user]="auth.getCurrentUser()" [sidebarOpen]="sidebarOpen"></app-sidebar>
+  <main class="main">
+    <header class="topbar" role="banner">
+      <button id="menuToggle" class="menu-btn" aria-label="Abrir menu" (click)="toggleSidebar()">☰</button>
+      <div class="user-actions">
+        <button class="btn primary" (click)="sair()">Sair</button>
+      </div>
+    </header>
+    <section class="content" aria-live="polite">
+      <div class="dashboard-content">
+        <div class="dashboard-card full-width">
+          <h2>Relatórios de Transações</h2>
+          <div class="report-filters">
+            <label>Período:</label>
+            <input type="date" [(ngModel)]="dataInicio" />
+            <span>até</span>
+            <input type="date" [(ngModel)]="dataFim" />
+            <button class="btn-primary" (click)="buscarRelatorio()">Buscar</button>
+          </div>
+          <div *ngIf="carregando" class="loading">Carregando...</div>
+          <div *ngIf="erro" class="alert alert-error">{{ erro }}</div>
+          <table *ngIf="relatorio && relatorio.length > 0" class="report-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Pedido</th>
+                <th>Cliente</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Método</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of relatorio">
+                <td>{{ t.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ t.orderId }}</td>
+                <td>{{ t.customer?.name }}</td>
+                <td>{{ t.amount | currency:'BRL' }}</td>
+                <td>{{ t.status }}</td>
+                <td>{{ t.paymentMethod }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div *ngIf="relatorio && relatorio.length === 0 && !carregando" class="empty-text">Nenhuma transação encontrada para o período.</div>
+        </div>
+      </div>
+    </section>
+  </main>

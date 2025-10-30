@@ -1,6 +1,6 @@
 
 <div class="app">
-  <app-sidebar></app-sidebar>
+  <app-sidebar [user]="auth.getCurrentUser()" [sidebarOpen]="sidebarOpen"></app-sidebar>
   <main class="main">
     <header class="topbar" role="banner">
       <button id="menuToggle" class="menu-btn" aria-label="Abrir menu" (click)="toggleSidebar()">☰</button>
@@ -12,11 +12,32 @@
     <section class="content" aria-live="polite">
       <div class="dashboard-content">
         <div class="dashboard-grid">
+          <!-- Card: Gerar Chaves Merchant -->
+          <div class="dashboard-card">
+            <h2>Gerar chaves merchant</h2>
+            <button class="btn btn-primary mb-2" type="button" (click)="gerarChaves()">Gerar chaves merchant</button>
+            <div *ngIf="chaveStatus" class="alert alert-info mb-2">{{ chaveStatus }}</div>
+            <div *ngIf="merchantKey && merchantSecret" class="mb-3">
+              <label class="fw-bold">Merchant Key:</label>
+              <pre class="bg-light p-2 border rounded">{{ merchantKey }}</pre>
+              <label class="fw-bold">Merchant Secret:</label>
+              <pre class="bg-light p-2 border rounded">{{ merchantSecret }}</pre>
+            </div>
+          </div>
           <!-- Card: Gerar Headers HMAC -->
           <div class="dashboard-card">
             <h2>Integração TrustPay (HMAC)</h2>
             <p class="text-sm text-muted-foreground">Guia direto: gere os headers necessários e envie sua requisição.</p>
             <div class="form-grid" style="grid-template-columns: repeat(auto-fit,minmax(220px,1fr));">
+              <div class="field" style="grid-column: 1 / -1;">
+                <label>Selecionar rota para teste</label>
+                <select class="form-input" [(ngModel)]="selectedRoute" (change)="onRouteChange()">
+                  <option value="/api/merchant/v1/payment-intents">Criar intenção (merchant)</option>
+                  <option value="/api/merchant/v1/payments/:id/capture">Captura cartão (merchant)</option>
+                  <option value="/api/ecommerce/pay">Pagamento simplificado (e-commerce)</option>
+                </select>
+                <button class="btn-secondary" type="button" (click)="preencherDadosTeste()">Preencher dados de teste</button>
+              </div>
               <div class="field">
                 <label>API Key</label>
                 <input class="form-input" [(ngModel)]="signApiKey" placeholder="ex.: key1" />

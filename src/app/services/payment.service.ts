@@ -18,6 +18,12 @@ export class PaymentService {
 
   constructor(private http: HttpClient) {}
 
+    // Relatório de transações por período
+    getReport(params: { from: string; to: string }): Observable<{ success: boolean; data?: any[]; error?: { message: string } }> {
+      const qs = `?from=${encodeURIComponent(params.from)}&to=${encodeURIComponent(params.to)}`;
+      return this.http.get<{ success: boolean; data?: any[]; error?: { message: string } }>(`${this.apiUrl}/payments/report${qs}`);
+    }
+
   // Iniciar uma transação de pagamento
   initiatePayment(request: PaymentInitiateRequest): Observable<PaymentResponse> {
     return this.http.post<PaymentResponse>(`${this.apiUrl}/payments/initiate`, request);
@@ -43,9 +49,9 @@ export class PaymentService {
     return this.http.get<Transaction>(`${this.apiUrl}/payments/${transactionId}`);
   }
 
-  // Obter transações recentes
-  getRecentTransactions(limit = 5): Observable<{ success: boolean; data?: { transactions: Transaction[] } }> {
-    return this.http.get<{ success: boolean; data?: { transactions: Transaction[] } }>(`${this.apiUrl}/payments/recent?limit=${limit}`);
+  // Obter intenções de pagamento/transações recentes (merchant)
+  getRecentTransactions(limit = 10): Observable<{ success: boolean; data?: Transaction[] }> {
+    return this.http.get<{ success: boolean; data?: Transaction[] }>(`${this.apiUrl}/merchant/v1/payments/recent`);
   }
 
   // Histórico paginado de transações

@@ -3,10 +3,11 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { Sidebar } from "../../shared/sidebar/sidebar";
 
 @Component({
   selector: 'app-wallet',
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, Sidebar],
   templateUrl: './wallet.html',
   styleUrl: './wallet.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -17,7 +18,7 @@ export class WalletPage {
   sidebarOpen = false;
   active: 'carteira' | 'novo' | 'relatorios' | 'config' = 'carteira';
 
-  constructor(private router: Router, private auth: AuthService) {}
+  constructor(private router: Router, public auth: AuthService) {}
 
   sair(): void {
     this.auth.logout().subscribe(() => {

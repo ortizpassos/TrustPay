@@ -5,6 +5,7 @@ import { RouterModule, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { Sidebar } from '../../shared/sidebar/sidebar';
 
+
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.html',
@@ -20,7 +21,7 @@ export class SettingsPage {
   errorMsg = '';
   sidebarOpen = false;
 
-  constructor(private auth: AuthService, private router: Router) {
+  constructor(public auth: AuthService, private router: Router) {
     this.auth.getUserProfile().subscribe((res: any) => {
       const user = res?.user;
       this.user = { ...user };

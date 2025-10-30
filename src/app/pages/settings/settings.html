@@ -10,7 +10,7 @@
     <section class="content" aria-live="polite">
 
 <div class="app">
-  <app-sidebar [sidebarOpen]="sidebarOpen" [user]="user"></app-sidebar>
+  <app-sidebar [user]="auth.getCurrentUser()" [sidebarOpen]="sidebarOpen"></app-sidebar>
   <main class="main">
   <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
     <h2 class="mb-4">Configurações da Conta</h2>

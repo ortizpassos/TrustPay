@@ -6,6 +6,9 @@ const errorHandler_1 = require("../middleware/errorHandler");
 class UserController {
     constructor() {
         this.list = (0, errorHandler_1.asyncHandler)(async (req, res) => {
+            if (!req.user || req.user.accountType !== 'loja') {
+                throw new errorHandler_1.AppError('Permissão negada: apenas usuários tipo loja podem acessar.', 403, 'FORBIDDEN');
+            }
             const { q } = req.query;
             const filter = {};
             if (q) {

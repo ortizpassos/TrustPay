@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 export declare const merchantController: {
+    getRecentPayments: (req: Request, res: Response, next: import("express").NextFunction) => void;
     createPaymentIntent: (req: Request, res: Response, next: import("express").NextFunction) => void;
     getPayment: (req: Request, res: Response, next: import("express").NextFunction) => void;
     capturePayment: (req: Request, res: Response, next: import("express").NextFunction) => void;

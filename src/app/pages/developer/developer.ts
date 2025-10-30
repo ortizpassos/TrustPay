@@ -13,6 +13,83 @@ import { Sidebar } from '../../shared/sidebar/sidebar';
   styleUrls: ['./developer.css']
 })
 export class DeveloperPage {
+  selectedRoute = '/api/merchant/v1/payment-intents';
+
+  onRouteChange() {
+    this.signPath = this.selectedRoute;
+    // Limpa body se rota for GET
+    if (this.signMethod === 'GET') this.signBody = '';
+  }
+
+  preencherDadosTeste() {
+    if (this.selectedRoute === '/api/ecommerce/pay') {
+      this.signMethod = 'POST';
+      this.signPath = '/api/ecommerce/pay';
+      this.signBody = JSON.stringify({
+        orderId: 'ORDER-12345',
+        amount: 19990,
+        currency: 'BRL',
+        customer: { name: 'Joao Silva', email: 'joao@example.com' },
+        returnUrl: 'https://seuecommerce.com/checkout/success',
+        callbackUrl: 'https://seuecommerce.com/webhooks/trustpay',
+        cardNumber: '4111111111111111',
+        cardHolderName: 'Joao Silva',
+        expirationMonth: '12',
+        expirationYear: '2030',
+        cvv: '123'
+      }, null, 2);
+    } else if (this.selectedRoute === '/api/merchant/v1/payment-intents') {
+      this.signMethod = 'POST';
+      this.signPath = '/api/merchant/v1/payment-intents';
+      this.signBody = JSON.stringify({
+        orderId: 'ORDER-1001',
+        amount: 123.45,
+        currency: 'BRL',
+        paymentMethod: 'credit_card',
+        customer: { name: 'Maria', email: 'maria@example.com' },
+        returnUrl: 'https://sualoja.com/return',
+        callbackUrl: 'https://sualoja.com/callback',
+        installments: { quantity: 1 }
+      }, null, 2);
+    } else if (this.selectedRoute === '/api/merchant/v1/payments/:id/capture') {
+      this.signMethod = 'POST';
+      this.signPath = '/api/merchant/v1/payments/:id/capture';
+      this.signBody = JSON.stringify({
+        cardNumber: '4111111111111111',
+        cardHolderName: 'JOAO SILVA',
+        expirationMonth: '12',
+        expirationYear: '2030',
+        cvv: '123'
+      }, null, 2);
+    }
+    this.updateNowTimestamp();
+    this.signSignatureHex = '';
+    this.signPayloadPreview = '';
+    this.headersText = '';
+    this.curlText = '';
+    this.testResult = null;
+  }
+  merchantKey: string | null = null;
+  merchantSecret: string | null = null;
+  chaveStatus: string | null = null;
+
+  gerarChaves() {
+    this.chaveStatus = null;
+    this.auth.generateMerchantKeys().subscribe({
+      next: (resp) => {
+        if (resp.success && resp.data) {
+          this.merchantKey = resp.data.merchantKey || null;
+          this.merchantSecret = resp.data.merchantSecret || null;
+          this.chaveStatus = 'Chaves geradas com sucesso!';
+        } else {
+          this.chaveStatus = resp.error?.message || 'Erro ao gerar chaves.';
+        }
+      },
+      error: (err) => {
+        this.chaveStatus = err.error?.message || 'Erro inesperado ao gerar chaves.';
+      }
+    });
+  }
   // sidebar state for mobile
   sidebarOpen = false;
   // Plain-text code samples injected into template via [textContent]
@@ -92,7 +169,7 @@ curl -sS -X POST \\
   headersText = '';
   curlText = '';
 
-  constructor(private router: Router, private auth: AuthService, private http: HttpClient) {}
+  constructor(private router: Router, public auth: AuthService, private http: HttpClient) {}
 
   testarEndpoint() {
     const url = this.baseUrl + this.signPath;

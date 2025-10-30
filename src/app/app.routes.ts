@@ -1,5 +1,4 @@
 import { Routes, CanActivateFn, Router } from '@angular/router';
-import { IntegrateComponent } from './pages/integrate/integrate';
 import { inject } from '@angular/core';
 import { HomeComponent } from './pages/home/home';
 import { PaymentComponent } from './pages/payment/payment';
@@ -13,12 +12,23 @@ import { TransactionsPage } from './pages/transactions/transactions';
 import { WalletPage } from './pages/wallet/wallet';
 import { AuthService } from './services/auth.service';
 
+
 // Guard de autenticação
 const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
   if (auth.isAuthenticated()) return true;
   router.navigate(['/auth']);
+  return false;
+};
+
+// Guard para lojista
+const merchantGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  const user = auth.getCurrentUser();
+  if (auth.isAuthenticated() && user && user.accountType === 'loja') return true;
+  router.navigate(['/dashboard']);
   return false;
 };
 
@@ -32,9 +42,9 @@ export const routes: Routes = [
   { path: 'transacoes', component: TransactionsPage, canActivate: [authGuard] },
   { path: 'carteira', component: WalletPage, canActivate: [authGuard] },
   { path: 'configuracoes', component: SettingsPage, canActivate: [authGuard] },
-  { path: 'desenvolvedor', component: DeveloperPage, canActivate: [authGuard] },
+  { path: 'desenvolvedor', component: DeveloperPage, canActivate: [authGuard, merchantGuard] },
   { path: 'minha-conta', component: SettingsPage, canActivate: [authGuard] },
-  { path: 'integrate', component: IntegrateComponent, canActivate: [authGuard] },
+
 
   { path: '**', redirectTo: '' }
 ];

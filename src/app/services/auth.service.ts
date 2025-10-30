@@ -1,6 +1,6 @@
 // ...existing code...
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { 
   User, 
@@ -20,7 +20,12 @@ import { getApiBase } from '../config/api.config';
 export class AuthService {
   // Gerar chaves merchant para lojista
   generateMerchantKeys(): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/generate-merchant-keys`, {});
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.post<AuthResponse>(`${this.apiUrl}/generate-merchant-keys`, {}, { headers });
   }
   private apiUrl = `${getApiBase()}/auth`;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
@@ -39,8 +44,8 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.apiUrl}/register`, payload)
       .pipe(
         tap(response => {
-          if (response.success && response.data) {
-            this.setAuth(response.data.user, response.data.token, response.data.refreshToken);
+          if (response.success && response.data && response.data.user) {
+            this.setAuth(response.data.user, response.data.token ?? '', response.data.refreshToken ?? '');
           }
         })
       );
@@ -51,8 +56,8 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials)
       .pipe(
         tap(response => {
-          if (response.success && response.data) {
-            this.setAuth(response.data.user, response.data.token, response.data.refreshToken);
+          if (response.success && response.data && response.data.user) {
+            this.setAuth(response.data.user, response.data.token ?? '', response.data.refreshToken ?? '');
           }
         })
       );
@@ -98,7 +103,7 @@ export class AuthService {
     return this.http.put<AuthResponse>(`${this.apiUrl}/profile`, userData)
       .pipe(
         tap(response => {
-          if (response.success && response.data) {
+          if (response.success && response.data && response.data.user) {
             this.currentUserSubject.next(response.data.user);
           }
         })
@@ -141,8 +146,8 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.apiUrl}/refresh`, { refreshToken })
       .pipe(
         tap(response => {
-          if (response.success && response.data) {
-            this.setAuth(response.data.user, response.data.token, response.data.refreshToken);
+          if (response.success && response.data && response.data.user) {
+            this.setAuth(response.data.user, response.data.token ?? '', response.data.refreshToken ?? '');
           }
         })
       );

@@ -26,7 +26,7 @@ export class NewPaymentPage {
   carregando = signal(false);
   erro = signal('');
 
-  constructor(private payment: PaymentService, private router: Router, private auth: AuthService, private users: UserService) {}
+  constructor(private payment: PaymentService, private router: Router, public auth: AuthService, private users: UserService) {}
 
   sair(): void {
     this.auth.logout().subscribe(() => {

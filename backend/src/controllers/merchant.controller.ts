@@ -5,6 +5,15 @@ import { AppError, asyncHandler } from '../middleware/errorHandler';
 import { externalCardValidationService } from '../services/externalCardValidation.service';
 
 export const merchantController = {
+  // GET /payments/recent
+  getRecentPayments: asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const merchantKey = req.merchant!.merchantKey;
+    // Busca as 10 transações mais recentes do merchant
+    const txs = await Transaction.find({ merchantId: merchantKey })
+      .sort({ createdAt: -1 })
+      .limit(10);
+    res.json({ success: true, data: txs.map(tx => tx.toJSON()) });
+  }),
   // POST /payment-intents
   createPaymentIntent: asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const merchantKey = req.merchant!.merchantKey;

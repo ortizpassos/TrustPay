@@ -32,10 +32,12 @@ export interface UserLogin {
 export interface AuthResponse {
   success: boolean;
   data?: {
-    user: User;
-    token: string;
-    refreshToken: string;
-    expiresIn: number;
+    user?: User;
+    token?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+    merchantKey?: string;
+    merchantSecret?: string;
   };
   error?: {
     message: string;

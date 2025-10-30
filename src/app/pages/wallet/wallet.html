@@ -1,27 +1,5 @@
 <div class="app">
-  <aside class="sidebar" [class.open]="sidebarOpen" aria-label="Navegação principal" role="navigation">
-    <div class="brand">
-  <a class="logo" [routerLink]="['/dashboard']" aria-label="Ir para Dashboard">🏠</a>
-      <div class="brand-text">
-        <h1>TrustPay</h1>
-        <p>Carteira</p>
-      </div>
-    </div>
-    <div class="sidebar-actions">
-      <div class="quick-actions">
-        <a class="quick-action-btn" [routerLink]="['/novo-pagamento']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeSidebarOnNavigate()"><span class="action-icon">💳</span><span>Novo Pagamento</span></a>
-        <a class="quick-action-btn" [routerLink]="['/relatorios']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeSidebarOnNavigate()"><span class="action-icon">📊</span><span>Relatórios</span></a>
-        <a class="quick-action-btn" [routerLink]="['/carteira']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeSidebarOnNavigate()"><span class="action-icon">👛</span><span>Carteira</span></a>
-        <a class="quick-action-btn" [routerLink]="['/desenvolvedor']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeSidebarOnNavigate()"><span class="action-icon">🛠️</span><span>Developer</span></a>
-        <a class="quick-action-btn" [routerLink]="['/configuracoes']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeSidebarOnNavigate()"><span class="action-icon">⚙️</span><span>Configurações</span></a>
-        <button type="button" class="quick-action-btn" (click)="sair()">
-          <span class="action-icon">🚪</span>
-          <span>Sair</span>
-        </button>
-  <img class="sidebar-gif" src="/assets/card.gif" alt="TrustPay animation" loading="lazy" />
-      </div>
-    </div>
-  </aside>
+  <app-sidebar [user]="auth.getCurrentUser()" [sidebarOpen]="sidebarOpen"></app-sidebar>
   <main class="main">
     <header class="topbar" role="banner">
   <button id="menuToggle" class="menu-btn" aria-label="Abrir menu" (click)="toggleSidebar()">☰</button>

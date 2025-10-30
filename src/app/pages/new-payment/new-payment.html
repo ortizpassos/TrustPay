@@ -1,5 +1,5 @@
 <div class="app">
-  <app-sidebar></app-sidebar>
+  <app-sidebar [user]="auth.getCurrentUser()" [sidebarOpen]="sidebarOpen"></app-sidebar>
   <main class="main">
     <header class="topbar" role="banner">
       <button id="menuToggle" class="menu-btn" aria-label="Abrir menu" (click)="toggleSidebar()">☰</button>

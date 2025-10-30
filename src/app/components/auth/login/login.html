@@ -1,32 +1,35 @@
 <div class="container">
   <div class="logo">TrustPay</div>
-
-  <input
-    type="text"
-    class="input-box"
-    placeholder="E-mail ou número de celular"
-    [(ngModel)]="dadosLogin.email"
-    name="email"
-  />
-
-  <div class="password-input-group">
+  <form (ngSubmit)="onSubmit()" autocomplete="on">
     <input
-      [type]="mostrarSenha ? 'text' : 'password'"
+      type="text"
       class="input-box"
-      placeholder="Senha"
-      [(ngModel)]="dadosLogin.password"
-      name="password"
+      placeholder="E-mail ou número de celular"
+      [(ngModel)]="dadosLogin.email"
+      name="email"
+      autocomplete="username"
     />
-    <button type="button" class="password-toggle" (click)="togglePasswordVisibility()" [title]="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'">
-      <div [class]="mostrarSenha ? 'eye-off-icon' : 'eye-icon'"></div>
+
+    <div class="password-input-group">
+      <input
+        [type]="mostrarSenha ? 'text' : 'password'"
+        class="input-box"
+        placeholder="Senha"
+        [(ngModel)]="dadosLogin.password"
+        name="password"
+        autocomplete="current-password"
+      />
+      <button type="button" class="password-toggle" (click)="togglePasswordVisibility()" [title]="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'">
+        <div [class]="mostrarSenha ? 'eye-off-icon' : 'eye-icon'"></div>
+      </button>
+    </div>
+
+    <div class="link"><a href="#" (click)="onForgotPassword()">Esqueceu a senha?</a></div>
+
+    <button class="btn-login" type="submit" [disabled]="carregando">
+      {{ carregando ? 'Entrando...' : 'Log in' }}
     </button>
-  </div>
-
-  <div class="link"><a href="#" (click)="onForgotPassword()">Esqueceu a senha?</a></div>
-
-  <button class="btn-login" (click)="onSubmit()" [disabled]="carregando">
-    {{ carregando ? 'Entrando...' : 'Log in' }}
-  </button>
+  </form>
 
   <div class="divider">ou</div>
 

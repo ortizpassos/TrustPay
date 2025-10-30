@@ -105,6 +105,8 @@ class App {
         if (env_1.env.merchant.keys.length) {
             this.app.use('/api/merchant/v1', merchant_routes_1.default);
         }
+        const ecommerceRoutes = require('./routes/ecommerce.routes').default;
+        this.app.use('/api/ecommerce', ecommerceRoutes);
         if (!env_1.env.isProd) {
             this.app.use('/api/debug', debug_routes_1.default);
         }

@@ -125,6 +125,9 @@ class App {
     if (env.merchant.keys.length) {
       this.app.use('/api/merchant/v1', merchantRoutes);
     }
+    // Rota simplificada para pagamentos via e-commerce
+    const ecommerceRoutes = require('./routes/ecommerce.routes').default;
+    this.app.use('/api/ecommerce', ecommerceRoutes);
     if (!env.isProd) {
       this.app.use('/api/debug', debugRoutes);
     }
