@@ -14,6 +14,7 @@ router.post('/verify-email', (0, validation_1.validate)(validation_2.verifyEmail
 router.post('/refresh', (0, validation_1.validate)(validation_2.refreshTokenSchema), auth_controller_1.authController.refreshToken);
 router.use(auth_1.authenticate);
 router.post('/generate-merchant-keys', auth_controller_1.authController.generateMerchantKeys);
+router.get('/profile', auth_controller_1.authController.getProfile);
 router.post('/resend-verification', auth_1.requireEmailVerification, auth_controller_1.authController.resendVerification);
 exports.default = router;
 //# sourceMappingURL=auth.routes.js.map

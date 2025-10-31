@@ -21,7 +21,7 @@ class AuthController {
                 throw new errorHandler_1.AppError('Chaves já foram geradas para este lojista.', 400, 'MERCHANT_KEYS_EXISTS');
             }
             const merchantKey = 'merchant-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
-            const merchantSecret = crypto_1.default.randomBytes(32).toString('hex');
+            const merchantSecret = crypto_1.default.randomBytes(15).toString('hex').substring(0, 30);
             user.merchantKey = merchantKey;
             user.merchantSecret = merchantSecret;
             await user.save();
@@ -39,7 +39,7 @@ class AuthController {
             let merchantSecret = undefined;
             if (accountType === 'loja') {
                 merchantKey = 'merchant-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
-                merchantSecret = crypto_1.default.randomBytes(32).toString('hex');
+                merchantSecret = crypto_1.default.randomBytes(15).toString('hex').substring(0, 30);
             }
             const existingUser = await User_1.User.findOne({ email });
             if (existingUser) {
@@ -195,11 +195,11 @@ class AuthController {
             }
         });
         this.getProfile = (0, errorHandler_1.asyncHandler)(async (req, res) => {
-            const user = req.user;
+            const userDoc = await User_1.User.findById(req.user._id).select('+merchantSecret');
             res.json({
                 success: true,
                 data: {
-                    user: user.toJSON()
+                    user: userDoc ? userDoc.toJSON() : {}
                 }
             });
         });

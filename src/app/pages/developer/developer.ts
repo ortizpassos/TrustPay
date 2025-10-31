@@ -1,10 +1,10 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
 import { Sidebar } from '../../shared/sidebar/sidebar';
+import { Component, ChangeDetectorRef } from '@angular/core';
 
 @Component({
   selector: 'app-developer',
@@ -13,27 +13,93 @@ import { Sidebar } from '../../shared/sidebar/sidebar';
   styleUrls: ['./developer.css']
 })
 export class DeveloperPage {
-  merchantKey: string | null = null;
-  merchantSecret: string | null = null;
-  chaveStatus: string | null = null;
-
-  gerarChaves() {
-    this.chaveStatus = null;
-    this.auth.generateMerchantKeys().subscribe({
-      next: (resp) => {
-        if (resp.success && resp.data) {
-          this.merchantKey = resp.data.merchantKey || null;
-          this.merchantSecret = resp.data.merchantSecret || null;
-          this.chaveStatus = 'Chaves geradas com sucesso!';
-        } else {
-          this.chaveStatus = resp.error?.message || 'Erro ao gerar chaves.';
-        }
+  // Payload options
+  payloadOptions = [
+    {
+      label: 'Criar pagamento',
+      value: 'payment',
+      payload: {
+        orderId: 'ORDER-12345',
+        amount: 19990,
+        currency: 'BRL',
+        paymentMethod: 'credit_card',
+        customer: {
+          name: 'Joao Silva',
+          email: 'joao@example.com'
+        },
+        callbackUrl: 'https://seuecommerce.com/webhooks/trustpay',
+        returnUrl: 'https://seuecommerce.com/checkout/success'
+      }
+    },
+    {
+      label: 'Dados do cartão',
+      value: 'card',
+      payload: {
+        cardNumber: '4111111111111111',
+        cardHolderName: 'JOAO SILVA',
+        expirationMonth: '12',
+        expirationYear: '2030',
+        cvv: '123'
+      }
+    }
+  ];
+  selectedPayloadType = 'payment';
+  get selectedPayload() {
+    return this.payloadOptions.find(opt => opt.value === this.selectedPayloadType)?.payload;
+  }
+  preencherHeaders() {
+    // Busca as chaves do usuário do backend antes de gerar os headers
+    this.auth.getUserProfile().subscribe({
+      next: (profile: any) => {
+        this.merchantKey = profile?.data?.user?.merchantKey ?? '';
+        this.merchantSecret = profile?.data?.user?.merchantSecret ?? '';
+        this.signApiKey = this.merchantKey ?? '';
+        this.signSecret = this.merchantSecret ?? '';
+        this.signTimestamp = Math.floor(Date.now() / 1000);
+        this.generateSignature();
       },
-      error: (err) => {
-        this.chaveStatus = err.error?.message || 'Erro inesperado ao gerar chaves.';
+      error: () => {
+        this.merchantKey = '';
+        this.merchantSecret = '';
+        this.signApiKey = '';
+        this.signSecret = '';
+        this.signTimestamp = Math.floor(Date.now() / 1000);
+        this.generateSignature();
       }
     });
   }
+  mostrarChaves = false;
+  toggleMostrarChaves() {
+    if (!this.mostrarChaves) {
+      // Buscar as chaves do usuário no banco de dados
+      this.auth.getUserProfile().subscribe({
+        next: (profile) => {
+          console.log('profile:', profile);
+          this.merchantKey = (profile as any)?.data?.user?.merchantKey ?? null;
+          this.merchantSecret = (profile as any)?.data?.user?.merchantSecret ?? null;
+          console.log('merchantKey:', this.merchantKey, 'merchantSecret:', this.merchantSecret);
+          this.mostrarChaves = true;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.merchantKey = null;
+          this.merchantSecret = null;
+          this.mostrarChaves = true;
+        }
+      });
+    } else {
+      this.mostrarChaves = false;
+    }
+  }
+  merchantKey: string | null = null;
+  merchantSecret: string | null = null;
+
+  constructor(
+  private router: Router,
+  public auth: AuthService,
+  private http: HttpClient,
+  private cdr: ChangeDetectorRef
+) {}
   // sidebar state for mobile
   sidebarOpen = false;
   // Plain-text code samples injected into template via [textContent]
@@ -113,7 +179,7 @@ curl -sS -X POST \\
   headersText = '';
   curlText = '';
 
-  constructor(private router: Router, public auth: AuthService, private http: HttpClient) {}
+  // Removido construtor duplicado
 
   testarEndpoint() {
     const url = this.baseUrl + this.signPath;

@@ -65,12 +65,14 @@ class ExternalCardValidationService {
             }
             if (ax.response) {
                 const r = ax.response.data || {};
-                const rejected = { valid: false, reason: r.reason || r.message || 'EXTERNAL_REJECTED', provider: 'external', networkLatencyMs: latency };
+                const reason = r.reason || r.message || 'EXTERNAL_REJECTED';
+                const rejected = { valid: false, reason, provider: 'external', networkLatencyMs: latency };
                 if (debug)
                     console.log('[EXT-CARD][ERROR][REJECTED]', rejected);
                 return rejected;
             }
-            const generic = { valid: false, reason: 'EXTERNAL_ERROR', provider: 'external', networkLatencyMs: latency };
+            const genericReason = ax?.message || 'EXTERNAL_ERROR';
+            const generic = { valid: false, reason: genericReason, provider: 'external', networkLatencyMs: latency };
             if (debug)
                 console.log('[EXT-CARD][ERROR][GENERIC]', generic);
             return generic;

@@ -30,10 +30,10 @@ class AuthController {
     if (user.merchantKey && user.merchantSecret) {
       throw new AppError('Chaves já foram geradas para este lojista.', 400, 'MERCHANT_KEYS_EXISTS');
     }
-    // Gera chave pública única
-    const merchantKey = 'merchant-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
-    // Gera chave secreta forte
-    const merchantSecret = crypto.randomBytes(32).toString('hex');
+  // Gera chave pública única
+  const merchantKey = 'merchant-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+  // Gera chave secreta forte com 30 caracteres
+  const merchantSecret = crypto.randomBytes(15).toString('hex').substring(0, 30);
     user.merchantKey = merchantKey;
     user.merchantSecret = merchantSecret;
     await user.save();
@@ -53,10 +53,10 @@ class AuthController {
     let merchantKey: string | undefined = undefined;
     let merchantSecret: string | undefined = undefined;
     if (accountType === 'loja') {
-      // Gera chave pública única (ex: merchant-<timestamp>-<rand>)
-      merchantKey = 'merchant-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
-      // Gera chave secreta forte
-      merchantSecret = crypto.randomBytes(32).toString('hex');
+  // Gera chave pública única (ex: merchant-<timestamp>-<rand>)
+  merchantKey = 'merchant-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+  // Gera chave secreta forte com 30 caracteres
+  merchantSecret = crypto.randomBytes(15).toString('hex').substring(0, 30);
     }
 
   // Verifica se o e-mail já está cadastrado
@@ -263,12 +263,12 @@ class AuthController {
 
   // Retorna perfil do usuário autenticado
   getProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const user = req.user as IUser;
-
+    // Busca o usuário do banco incluindo merchantSecret
+    const userDoc = await User.findById((req.user as IUser)._id).select('+merchantSecret');
     res.json({
       success: true,
       data: {
-        user: user.toJSON()
+        user: userDoc ? userDoc.toJSON() : {}
       }
     });
   });

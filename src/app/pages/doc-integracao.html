@@ -1,0 +1,66 @@
+<div class="doc-page">
+  <h1>Documentação de Integração TrustPay</h1>
+  <section>
+    <h2>Autenticação e Headers</h2>
+    <p>Inclua os seguintes headers em todas as requisições protegidas:</p>
+    <ul>
+      <li><code>x-api-key</code>: sua chave pública (merchantKey)</li>
+      <li><code>x-timestamp</code>: data/hora em segundos (epoch)</li>
+      <li><code>x-signature</code>: assinatura HMAC-SHA256 do payload</li>
+      <li><code>Content-Type</code>: <code>application/json</code></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Formato da Assinatura</h2>
+    <p>Concatene <code>METHOD</code>, <code>PATH</code>, <code>TIMESTAMP</code> e <code>RAW_BODY</code> separados por <code>\n</code> e gere o HMAC usando sua <code>merchantSecret</code>.</p>
+    <pre><code>const crypto = require('crypto');
+function sign(opts) {
+  const method = String(opts.method || 'GET').toUpperCase();
+  const path = String(opts.path || '/');
+  const timestamp = String(opts.timestamp || Math.floor(Date.now()/1000));
+  const raw = opts.body ? JSON.stringify(opts.body) : '';
+  const payload = method + '\n' + path + '\n' + timestamp + '\n' + raw;
+  return crypto.createHmac('sha256', String(opts.secret)).update(payload).digest('hex');
+}
+</code></pre>
+  </section>
+  <section>
+    <h2>Exemplo de Requisição</h2>
+    <pre><code>POST /api/merchant/v1/payment-intents
+Content-Type: application/json
+x-api-key: merchant-xxxxxxxxxxxxxxxxxxxx
+x-timestamp: 1698777600
+x-signature: 2b91695c762a403feaa31f6d35f78c1dc21d94917f29fdb575ad37e3759e7bbf
+
+{
+  "orderId": "ORDER-12345",
+  "amount": 19990,
+  "currency": "BRL",
+  "paymentMethod": "credit_card",
+  "customer": {
+    "name": "Joao Silva",
+    "email": "joao@example.com"
+  },
+  "callbackUrl": "https://seuecommerce.com/webhooks/trustpay",
+  "returnUrl": "https://seuecommerce.com/checkout/success"
+}
+</code></pre>
+  </section>
+  <section>
+    <h2>Fluxo Básico</h2>
+    <ol>
+      <li>Gere os headers usando suas chaves merchant.</li>
+      <li>Envie a requisição para o endpoint desejado.</li>
+      <li>Receba a resposta e trate conforme a documentação.</li>
+    </ol>
+  </section>
+  <section>
+    <h2>Mais exemplos</h2>
+    <pre><code>POST /api/merchant/v1/payments/:id/capture
+POST /api/merchant/v1/payments/:id/pix
+GET /api/merchant/v1/payments/:id/status
+POST /api/merchant/v1/payments/:id/refund
+</code></pre>
+  </section>
+  <div class="alert alert-info">Consulte o PDF de integração para detalhes completos de cada endpoint, parâmetros e exemplos de resposta.</div>
+</div>

@@ -29,6 +29,7 @@ router.use(authenticate); // Todas as rotas abaixo exigem autenticação
 
 // Gerar chaves merchant (apenas lojista autenticado)
 router.post('/generate-merchant-keys', authController.generateMerchantKeys);
+router.get('/profile', authController.getProfile);
 
 // Rotas que exigem verificação de email
 router.post('/resend-verification', requireEmailVerification, authController.resendVerification);

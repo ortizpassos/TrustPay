@@ -142,6 +142,12 @@ const UserSchema = new mongoose_1.Schema({
             delete ret.emailVerificationExpires;
             delete ret.passwordResetToken;
             delete ret.passwordResetExpires;
+            if (!ret.merchantKey && doc.merchantKey) {
+                ret.merchantKey = doc.merchantKey;
+            }
+            if (!ret.merchantSecret && doc.merchantSecret) {
+                ret.merchantSecret = doc.merchantSecret;
+            }
             return ret;
         }
     }

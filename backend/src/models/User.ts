@@ -121,15 +121,22 @@ const UserSchema = new Schema<IUser>({
   timestamps: true,
   toJSON: {
     transform: function(doc, ret) {
-      (ret as any).id = ret._id;
-      delete (ret as any)._id;
-      delete (ret as any).__v;
-      delete (ret as any).password;
-      delete (ret as any).refreshTokens;
-      delete (ret as any).emailVerificationToken;
-      delete (ret as any).emailVerificationExpires;
-      delete (ret as any).passwordResetToken;
-      delete (ret as any).passwordResetExpires;
+  (ret as any).id = ret._id;
+  delete (ret as any)._id;
+  delete (ret as any).__v;
+  delete (ret as any).password;
+  delete (ret as any).refreshTokens;
+  delete (ret as any).emailVerificationToken;
+  delete (ret as any).emailVerificationExpires;
+  delete (ret as any).passwordResetToken;
+  delete (ret as any).passwordResetExpires;
+      // Garante que merchantKey e merchantSecret sejam incluídos no retorno
+      if (!ret.merchantKey && doc.merchantKey) {
+        ret.merchantKey = doc.merchantKey;
+      }
+      if (!ret.merchantSecret && doc.merchantSecret) {
+        ret.merchantSecret = doc.merchantSecret;
+      }
       return ret;
     }
   }
