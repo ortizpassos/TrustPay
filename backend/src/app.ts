@@ -122,12 +122,9 @@ class App {
     this.app.use('/api/payments', paymentRoutes);
     this.app.use('/api/cards', cardRoutes);
     this.app.use('/api/users', userRoutes);
-    if (env.merchant.keys.length) {
-      this.app.use('/api/merchant/v1', merchantRoutes);
-    }
-    // Rota simplificada para pagamentos via e-commerce
-    const ecommerceRoutes = require('./routes/ecommerce.routes').default;
-    this.app.use('/api/ecommerce', ecommerceRoutes);
+    // Mantém as rotas merchant sempre ativas
+    this.app.use('/api/merchant/v1', merchantRoutes);
+    console.log('🔑 Rotas merchant sempre ativas.');
     if (!env.isProd) {
       this.app.use('/api/debug', debugRoutes);
     }

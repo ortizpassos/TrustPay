@@ -76,21 +76,21 @@
       </div>
     </div>
 
-    <!-- Email -->
+    <!-- Senha -->
     <div class="form-group">
-      <label for="email" class="form-label">Email *</label>
+      <label for="password" class="form-label">Senha *</label>
       <input
-        id="email"
-        type="email"
-        placeholder="seu@email.com"
-        [(ngModel)]="dadosCadastro.email"
-        (input)="onInputChange('email')"
-        [class]="'form-input ' + (erros['email'] ? 'input-error' : '')"
-        name="email"
-        autocomplete="email"
+        id="password"
+        type="password"
+        placeholder="Crie uma senha segura"
+        [(ngModel)]="dadosCadastro.password"
+        name="password"
+        required
+        autocomplete="new-password"
+        [class]="'form-input ' + (erros['password'] ? 'input-error' : '')"
       />
-      @if (erros['email']) {
-        <span class="error-message">{{ erros['email'] }}</span>
+      @if (erros['password']) {
+        <span class="error-message">{{ erros['password'] }}</span>
       }
     </div>
 

@@ -102,11 +102,8 @@ class App {
         this.app.use('/api/payments', payment_routes_1.default);
         this.app.use('/api/cards', card_routes_1.default);
         this.app.use('/api/users', user_routes_1.default);
-        if (env_1.env.merchant.keys.length) {
-            this.app.use('/api/merchant/v1', merchant_routes_1.default);
-        }
-        const ecommerceRoutes = require('./routes/ecommerce.routes').default;
-        this.app.use('/api/ecommerce', ecommerceRoutes);
+        this.app.use('/api/merchant/v1', merchant_routes_1.default);
+        console.log('🔑 Rotas merchant sempre ativas.');
         if (!env_1.env.isProd) {
             this.app.use('/api/debug', debug_routes_1.default);
         }

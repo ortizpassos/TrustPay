@@ -5,10 +5,6 @@ import { asyncHandler, AppError } from '../middleware/errorHandler';
 class UserController {
   // GET /api/users?q=termo  (lista limitada de usuários para seleção)
   list = asyncHandler(async (req: Request, res: Response) => {
-    // Permitir apenas usuários tipo loja
-    if (!req.user || req.user.accountType !== 'loja') {
-      throw new AppError('Permissão negada: apenas usuários tipo loja podem acessar.', 403, 'FORBIDDEN');
-    }
     const { q } = req.query as { q?: string };
     const filter: any = {};
 

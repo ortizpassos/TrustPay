@@ -166,10 +166,10 @@ export class DashboardComponent {
   // ===== Transações Recentes =====
   carregarTransacoesRecentes(limit = 5): void {
     this.carregandoTransacoes.set(true);
-    this.paymentService.getRecentTransactions().subscribe({
+    this.paymentService.getRecentTransactions(limit).subscribe({
       next: (resp) => {
-        if (resp.success && Array.isArray(resp.data)) {
-          this.transacoesRecentes.set(resp.data as Transaction[]);
+        if (resp.success && resp.data?.transactions) {
+          this.transacoesRecentes.set(resp.data.transactions as Transaction[]);
         } else {
           this.transacoesRecentes.set([]);
         }

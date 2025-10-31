@@ -6,13 +6,6 @@ const paymentGateway_service_1 = require("../services/paymentGateway.service");
 const errorHandler_1 = require("../middleware/errorHandler");
 const externalCardValidation_service_1 = require("../services/externalCardValidation.service");
 exports.merchantController = {
-    getRecentPayments: (0, errorHandler_1.asyncHandler)(async (req, res) => {
-        const merchantKey = req.merchant.merchantKey;
-        const txs = await Transaction_1.Transaction.find({ merchantId: merchantKey })
-            .sort({ createdAt: -1 })
-            .limit(10);
-        res.json({ success: true, data: txs.map(tx => tx.toJSON()) });
-    }),
     createPaymentIntent: (0, errorHandler_1.asyncHandler)(async (req, res) => {
         const merchantKey = req.merchant.merchantKey;
         const { orderId, amount, currency = 'BRL', paymentMethod, customer, returnUrl, callbackUrl, installments } = req.body;

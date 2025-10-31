@@ -29,15 +29,6 @@
             <h2>Integração TrustPay (HMAC)</h2>
             <p class="text-sm text-muted-foreground">Guia direto: gere os headers necessários e envie sua requisição.</p>
             <div class="form-grid" style="grid-template-columns: repeat(auto-fit,minmax(220px,1fr));">
-              <div class="field" style="grid-column: 1 / -1;">
-                <label>Selecionar rota para teste</label>
-                <select class="form-input" [(ngModel)]="selectedRoute" (change)="onRouteChange()">
-                  <option value="/api/merchant/v1/payment-intents">Criar intenção (merchant)</option>
-                  <option value="/api/merchant/v1/payments/:id/capture">Captura cartão (merchant)</option>
-                  <option value="/api/ecommerce/pay">Pagamento simplificado (e-commerce)</option>
-                </select>
-                <button class="btn-secondary" type="button" (click)="preencherDadosTeste()">Preencher dados de teste</button>
-              </div>
               <div class="field">
                 <label>API Key</label>
                 <input class="form-input" [(ngModel)]="signApiKey" placeholder="ex.: key1" />

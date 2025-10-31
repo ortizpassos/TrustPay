@@ -175,8 +175,6 @@ UserSchema.methods.generatePasswordResetToken = function () {
     this.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
     return token;
 };
-UserSchema.index({ email: 1 });
-UserSchema.index({ document: 1 });
 UserSchema.index({ emailVerificationToken: 1 });
 UserSchema.index({ passwordResetToken: 1 });
 exports.User = mongoose_1.default.model('User', UserSchema);
