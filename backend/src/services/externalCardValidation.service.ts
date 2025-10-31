@@ -80,11 +80,15 @@ class ExternalCardValidationService {
       }
       if (ax.response) {
         const r: any = ax.response.data || {};
-        const rejected = { valid: false, reason: r.reason || r.message || 'EXTERNAL_REJECTED', provider: 'external', networkLatencyMs: latency };
+        // Se a resposta tem 'message' mas não tem 'reason', usa 'message' como motivo
+        const reason = r.reason || r.message || 'EXTERNAL_REJECTED';
+        const rejected = { valid: false, reason, provider: 'external', networkLatencyMs: latency };
         if (debug) console.log('[EXT-CARD][ERROR][REJECTED]', rejected);
         return rejected;
       }
-      const generic = { valid: false, reason: 'EXTERNAL_ERROR', provider: 'external', networkLatencyMs: latency };
+      // Se erro genérico, tenta pegar 'message' do erro
+      const genericReason = (ax as any)?.message || 'EXTERNAL_ERROR';
+      const generic = { valid: false, reason: genericReason, provider: 'external', networkLatencyMs: latency };
       if (debug) console.log('[EXT-CARD][ERROR][GENERIC]', generic);
       return generic;
     }
