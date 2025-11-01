@@ -1,22 +1,21 @@
 <div class="container">
   <!-- Mensagem de sucesso -->
-  <div *ngIf="sucessoMsg" class="alert alert-success fade-in">
-    <div class="alert-icon success-icon"></div>
-    <span>{{ sucessoMsg }}</span>
-  </div>
-
-  <!-- Conteúdo do formulário -->
-  <div *ngIf="!sucessoMsg">
+  @if (sucessoMsg) {
+    <div class="alert alert-success fade-in">
+      <div class="alert-icon success-icon"></div>
+      <span>{{ sucessoMsg }}</span>
+    </div>
+  }
+  @if (!sucessoMsg) {
     <div class="register-header">
       <h2 class="register-title">Criar nova conta</h2>
-      </div>
-
-    <!-- Erro geral -->
-    <div *ngIf="erroGeral" class="alert alert-error">
-      <div class="alert-icon error-icon"></div>
-      <span>{{ erroGeral }}</span>
     </div>
-
+    @if (erroGeral) {
+      <div class="alert alert-error">
+        <div class="alert-icon error-icon"></div>
+        <span>{{ erroGeral }}</span>
+      </div>
+    }
     <form (ngSubmit)="onSubmit()" class="register-form">
       <!-- Tipo de Conta -->
       <div class="form-group">
@@ -31,11 +30,10 @@
           <option value="loja">Loja (e-commerce, empresa)</option>
           <option value="pessoa_fisica">Pessoa Física</option>
         </select>
-        <span *ngIf="erros['accountType']" class="error-message">{{
-          erros['accountType']
-        }}</span>
+        @if (erros['accountType']) {
+          <span class="error-message">{{ erros['accountType'] }}</span>
+        }
       </div>
-
       <!-- Nome e Sobrenome -->
       <div class="form-row">
         <div class="form-group">
@@ -50,11 +48,10 @@
             name="firstName"
             autocomplete="given-name"
           />
-          <span *ngIf="erros['firstName']" class="error-message">{{
-            erros['firstName']
-          }}</span>
+          @if (erros['firstName']) {
+            <span class="error-message">{{ erros['firstName'] }}</span>
+          }
         </div>
-
         <div class="form-group">
           <label for="lastName" class="form-label">Sobrenome *</label>
           <input
@@ -67,9 +64,9 @@
             name="lastName"
             autocomplete="family-name"
           />
-          <span *ngIf="erros['lastName']" class="error-message">{{
-            erros['lastName']
-          }}</span>
+          @if (erros['lastName']) {
+            <span class="error-message">{{ erros['lastName'] }}</span>
+          }
         </div>
       </div>
       <div class="form-group">
@@ -84,9 +81,10 @@
           name="email"
           autocomplete="email"
         />
-        <span *ngIf="erros['email']" class="error-message">{{ erros['email'] }}</span>
+        @if (erros['email']) {
+          <span class="error-message">{{ erros['email'] }}</span>
+        }
       </div>
-
       <!-- Telefone e CPF -->
       <div class="form-row">
         <div class="form-group">
@@ -101,11 +99,10 @@
             name="phone"
             autocomplete="tel"
           />
-          <span *ngIf="erros['phone']" class="error-message">{{
-            erros['phone']
-          }}</span>
+          @if (erros['phone']) {
+            <span class="error-message">{{ erros['phone'] }}</span>
+          }
         </div>
-
         <div class="form-group">
           <label for="document" class="form-label">CPF</label>
           <input
@@ -119,12 +116,11 @@
             name="document"
             maxlength="14"
           />
-          <span *ngIf="erros['document']" class="error-message">{{
-            erros['document']
-          }}</span>
+          @if (erros['document']) {
+            <span class="error-message">{{ erros['document'] }}</span>
+          }
         </div>
       </div>
-
       <!-- Senha -->
       <div class="form-group">
         <label for="password" class="form-label">Senha *</label>
@@ -148,28 +144,27 @@
             <div [class]="mostrarSenha ? 'eye-off-icon' : 'eye-icon'"></div>
           </button>
         </div>
-
         <!-- Indicador de força da senha -->
-        <div *ngIf="dadosCadastro.password" class="password-strength">
-          <div class="strength-bar">
-            <div [class]="'strength-fill ' + getPasswordStrength()"></div>
+        @if (dadosCadastro.password) {
+          <div class="password-strength">
+            <div class="strength-bar">
+              <div [class]="'strength-fill ' + getPasswordStrength()"></div>
+            </div>
+            <span [class]="'strength-text ' + getPasswordStrength()">
+              {{
+                getPasswordStrength() === 'weak'
+                  ? 'Fraca'
+                  : getPasswordStrength() === 'medium'
+                  ? 'Média'
+                  : 'Forte'
+              }}
+            </span>
           </div>
-          <span [class]="'strength-text ' + getPasswordStrength()">
-            {{
-              getPasswordStrength() === 'weak'
-                ? 'Fraca'
-                : getPasswordStrength() === 'medium'
-                ? 'Média'
-                : 'Forte'
-            }}
-          </span>
-        </div>
-
-        <span *ngIf="erros['password']" class="error-message">{{
-          erros['password']
-        }}</span>
+        }
+        @if (erros['password']) {
+          <span class="error-message">{{ erros['password'] }}</span>
+        }
       </div>
-
       <!-- Confirmar Senha -->
       <div class="form-group">
         <label for="confirmPassword" class="form-label">Confirmar Senha *</label>
@@ -192,11 +187,10 @@
             <div [class]="mostrarConfirmarSenha ? 'eye-off-icon' : 'eye-icon'"></div>
           </button>
         </div>
-        <span *ngIf="erros['confirmPassword']" class="error-message">{{
-          erros['confirmPassword']
-        }}</span>
+        @if (erros['confirmPassword']) {
+          <span class="error-message">{{ erros['confirmPassword'] }}</span>
+        }
       </div>
-
       <!-- Termos -->
       <div class="form-group">
         <div class="checkbox-group">
@@ -214,22 +208,23 @@
             <a href="/privacy" target="_blank" class="link">política de privacidade</a>
           </label>
         </div>
-        <span *ngIf="erros['terms']" class="error-message">{{ erros['terms'] }}</span>
+        @if (erros['terms']) {
+          <span class="error-message">{{ erros['terms'] }}</span>
+        }
       </div>
-
       <!-- Botão de registro -->
       <button type="submit" class="btn-register" [disabled]="carregando">
-        <div *ngIf="carregando" class="spinner-small"></div>
+        @if (carregando) {
+          <div class="spinner-small"></div>
+        }
         <span>{{ carregando ? 'Criando conta...' : 'Criar conta' }}</span>
       </button>
     </form>
-
-    <!-- Link para login -->
     <div class="switch-auth">
       <span>Já tem uma conta?</span>
       <button type="button" class="switch-link" (click)="onSwitchToLogin()">
         Entrar
       </button>
     </div>
-  </div>
+  }
 </div>
