@@ -20,6 +20,7 @@ export interface ExternalCardValidationRequest {
 export interface ExternalCardValidationResponse {
   valid: boolean;               // Indica se o cartão passou na validação externa
   reason?: string;              // Motivo da rejeição se !valid
+  reasons?: any;                // Motivos detalhados da validação externa
   riskScore?: number;           // Score de risco (se fornecido pelo provedor)
   networkLatencyMs?: number;    // Latência medida da chamada externa
   provider?: string;            // Identificação do provedor / modo (ex: 'disabled', 'external')
