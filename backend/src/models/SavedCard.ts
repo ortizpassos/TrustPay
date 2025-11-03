@@ -10,6 +10,7 @@ export interface ISavedCard extends Document {
   lastFourDigits: string;
   cardBrand: CardBrand;
   cardHolderName: string;
+  cardHolderCpf: string;
   expirationMonth: string;
   expirationYear: string;
   isDefault: boolean;
@@ -47,6 +48,11 @@ const SavedCardSchema = new Schema<ISavedCard>({
     required: [true, 'Card holder name is required'],
     trim: true,
     maxlength: [100, 'Card holder name cannot be more than 100 characters']
+  },
+  cardHolderCpf: {
+    type: String,
+    required: [true, 'Card holder CPF is required'],
+    match: [/^\d{11}$/, 'Card holder CPF must be 11 digits']
   },
   expirationMonth: {
     type: String,
