@@ -124,10 +124,13 @@ export class DashboardComponent {
           console.log('[FRONTEND][PAYLOAD ENVIADO PARA BACKEND]', payload);
           this.cardService.saveCard(payload).subscribe({
             next: (resp) => {
-              if (resp.success && resp.data) {
-                this.carregarCartoes();
+              if (resp.success && resp.card) {
+                // Adiciona o novo cartão à lista imediatamente
+                const listaAtual = this.cartoes();
+                this.cartoes.set([resp.card, ...listaAtual]);
                 this.novoCartao.set({ cardNumber: '', cardHolderName: '', cardHolderCpf: '', expirationMonth: '', expirationYear: '', cvv: '', isDefault: false });
                 this.mostrarFormularioNovoCartao.set(false);
+                this.errosCartao.set(['Cartão salvo com sucesso']);
               } else {
                 const friendly = mapExternalCardReason(resp.error?.message) || resp.error?.message || 'Falha ao salvar cartão';
                 this.errosCartao.set([friendly]);

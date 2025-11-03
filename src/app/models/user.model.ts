@@ -1,3 +1,12 @@
+export interface SavedCardResponse {
+  success: boolean;
+  data?: SavedCard | SavedCard[];
+  card?: SavedCard;
+  error?: {
+    message: string;
+    code?: string;
+  };
+}
 export interface User {
   accountType?: string;
   merchantKey?: string;

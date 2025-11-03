@@ -1,17 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { SavedCard, SaveCardRequest } from '../models/user.model';
+import { SavedCard, SaveCardRequest, SavedCardResponse } from '../models/user.model';
 import { getApiBase } from '../config/api.config';
 
-export interface SavedCardResponse {
-  success: boolean;
-  data?: SavedCard | SavedCard[];
-  error?: {
-    message: string;
-    code?: string;
-  };
-}
+// Removido: interface duplicada SavedCardResponse. Usar apenas do models/user.model.ts
 
 @Injectable({
   providedIn: 'root'
