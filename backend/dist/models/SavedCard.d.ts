@@ -8,6 +8,7 @@ export interface ISavedCard extends Document {
     lastFourDigits: string;
     cardBrand: CardBrand;
     cardHolderName: string;
+    cardHolderCpf: string;
     expirationMonth: string;
     expirationYear: string;
     isDefault: boolean;

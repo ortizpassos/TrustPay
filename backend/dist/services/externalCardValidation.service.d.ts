@@ -14,6 +14,7 @@ export interface ExternalCardValidationRequest {
 export interface ExternalCardValidationResponse {
     valid: boolean;
     reason?: string;
+    reasons?: any;
     riskScore?: number;
     networkLatencyMs?: number;
     provider?: string;

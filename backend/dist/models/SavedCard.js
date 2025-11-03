@@ -66,6 +66,11 @@ const SavedCardSchema = new mongoose_1.Schema({
         trim: true,
         maxlength: [100, 'Card holder name cannot be more than 100 characters']
     },
+    cardHolderCpf: {
+        type: String,
+        required: [true, 'Card holder CPF is required'],
+        match: [/^\d{11}$/, 'Card holder CPF must be 11 digits']
+    },
     expirationMonth: {
         type: String,
         required: [true, 'Expiration month is required'],
