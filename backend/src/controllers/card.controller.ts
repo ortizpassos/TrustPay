@@ -138,6 +138,8 @@ class CardController {
         success: true,
         valid: true,
         reasons: externalResult.reasons || {},
+        message: 'Cartão salvo com sucesso',
+        card: savedCard.toJSON()
       });
     } catch (error: any) {
       const isDev = process.env.NODE_ENV !== 'production';

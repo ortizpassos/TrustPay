@@ -105,6 +105,8 @@ class CardController {
                     success: true,
                     valid: true,
                     reasons: externalResult.reasons || {},
+                    message: 'Cartão salvo com sucesso',
+                    card: savedCard.toJSON()
                 });
             }
             catch (error) {
