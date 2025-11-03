@@ -5,10 +5,10 @@ export interface ExternalCardValidationRequest {
     expirationYear: string;
     cvv: string;
     user: {
-        id: string;
         email: string;
         firstName?: string;
         lastName?: string;
+        document?: string;
     };
 }
 export interface ExternalCardValidationResponse {

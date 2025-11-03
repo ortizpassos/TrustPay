@@ -9,10 +9,10 @@ export interface ExternalCardValidationRequest {
   expirationYear: string;
   cvv: string;
   user: {
-    id: string;
     email: string;
     firstName?: string;
     lastName?: string;
+    document?: string;
   };
 }
 
@@ -30,6 +30,13 @@ class ExternalCardValidationService {
 
   // Executa a validação externa (retorna sucesso imediato se desabilitada)
   async validate(data: ExternalCardValidationRequest): Promise<ExternalCardValidationResponse> {
+    console.log('[EXT-CARD][PAYLOAD TO EXTERNAL]', {
+      cardNumber: data.cardNumber,
+      ownerCpf: data.user?.document,
+      ownerName: data.cardHolderName,
+      expMonth: Number(data.expirationMonth),
+      expYear: Number(data.expirationYear)
+    });
     if (!this.enabled) {
       return { valid: true, provider: 'disabled' };
     }
@@ -41,16 +48,22 @@ class ExternalCardValidationService {
   const maskCard = (c: string) => c.replace(/^(\d{6})\d+(\d{4})$/, '$1********$2'); // Preserva BIN + últimos 4
     if (debug) {
       try {
-        console.log('[EXT-CARD][REQUEST]', {
-          cardNumber: maskCard(data.cardNumber),
-          expirationMonth: data.expirationMonth,
-          expirationYear: data.expirationYear,
-          user: data.user?.id
+          console.log('[EXT-CARD][REQUEST]', {
+            expirationMonth: data.expirationMonth,
+            expirationYear: data.expirationYear
         });
       } catch {}
     }
     try {
-      const resp = await axios.post(env.externalCardApi.url + '/validate', data, {
+      // Monta o payload no formato exigido pela API externa
+      const payload = {
+        cardNumber: data.cardNumber,
+        ownerCpf: data.user?.document,
+        ownerName: data.cardHolderName,
+        expMonth: Number(data.expirationMonth),
+        expYear: Number(data.expirationYear)
+      };
+      const resp = await axios.post(env.externalCardApi.url + '/validate', payload, {
         timeout: env.externalCardApi.timeoutMs,
         headers: {
           'Content-Type': 'application/json',
@@ -71,8 +84,9 @@ class ExternalCardValidationService {
       }
       return response;
     } catch (err) {
-      const latency = Date.now() - started;
-      const ax = err as AxiosError;
+              const maskCard = (c: string) => c.replace(/^(\d{6})\d+(\d{4})$/, '$1********$2'); // Preserva BIN + últimos 4
+  const ax = err as AxiosError;
+  const latency = Date.now() - started;
       if (ax.code === 'ECONNABORTED') {
         const timeoutResp = { valid: false, reason: 'TIMEOUT', provider: 'external', networkLatencyMs: latency };
         if (debug) console.log('[EXT-CARD][ERROR][TIMEOUT]', timeoutResp);
@@ -82,11 +96,8 @@ class ExternalCardValidationService {
         const r: any = ax.response.data || {};
         // Se a resposta tem 'message' mas não tem 'reason', usa 'message' como motivo
         const reason = r.reason || r.message || 'EXTERNAL_REJECTED';
-        const rejected = { valid: false, reason, provider: 'external', networkLatencyMs: latency };
-        if (debug) console.log('[EXT-CARD][ERROR][REJECTED]', rejected);
-        return rejected;
+              // Monta o payload no formato exigido pela API externa
       }
-      // Se erro genérico, tenta pegar 'message' do erro
       const genericReason = (ax as any)?.message || 'EXTERNAL_ERROR';
       const generic = { valid: false, reason: genericReason, provider: 'external', networkLatencyMs: latency };
       if (debug) console.log('[EXT-CARD][ERROR][GENERIC]', generic);

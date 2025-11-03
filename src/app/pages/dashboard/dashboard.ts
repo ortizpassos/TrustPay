@@ -42,6 +42,7 @@ export class DashboardComponent {
   novoCartao = signal<SaveCardRequest>({
     cardNumber: '',
     cardHolderName: '',
+    cardHolderCpf: '',
     expirationMonth: '',
     expirationYear: '',
     cvv: '',
@@ -114,18 +115,38 @@ export class DashboardComponent {
       return;
     }
     this.salvandoCartao.set(true);
-    this.cardService.saveCard({ ...dados }).subscribe({
-      next: (resp) => {
-        if (resp.success && resp.data) {
-          // Sucesso somente se backend validou externamente (backend já bloqueia salvar se inválido)
-          this.carregarCartoes();
-          this.novoCartao.set({ cardNumber: '', cardHolderName: '', expirationMonth: '', expirationYear: '', cvv: '', isDefault: false });
-          this.mostrarFormularioNovoCartao.set(false);
+    // Validação externa antes de salvar
+    this.cardService.validateCardExternally(dados).subscribe({
+      next: (extResp) => {
+        if (extResp.valid) {
+          // Só salva se a validação externa for positiva
+          const payload = this.cardService['buildSavePayload'](dados);
+          console.log('[FRONTEND][PAYLOAD ENVIADO PARA BACKEND]', payload);
+          this.cardService.saveCard(payload).subscribe({
+            next: (resp) => {
+              if (resp.success && resp.data) {
+                this.carregarCartoes();
+                this.novoCartao.set({ cardNumber: '', cardHolderName: '', cardHolderCpf: '', expirationMonth: '', expirationYear: '', cvv: '', isDefault: false });
+                this.mostrarFormularioNovoCartao.set(false);
+              } else {
+                const friendly = mapExternalCardReason(resp.error?.message) || resp.error?.message || 'Falha ao salvar cartão';
+                this.errosCartao.set([friendly]);
+              }
+              this.salvandoCartao.set(false);
+            },
+            error: (err) => {
+              const raw = err.error?.error?.message || err.error?.message || 'Erro inesperado';
+              const friendly = mapExternalCardReason(raw) || raw;
+              this.errosCartao.set([friendly]);
+              this.salvandoCartao.set(false);
+            }
+          });
         } else {
-          const friendly = mapExternalCardReason(resp.error?.message) || resp.error?.message || 'Falha ao salvar cartão';
-            this.errosCartao.set([friendly]);
+          // Bloqueia salvar se rejeitado externamente
+          const friendly = mapExternalCardReason(extResp.reason) || extResp.reason || 'Cartão rejeitado pela validação externa';
+          this.errosCartao.set([friendly]);
+          this.salvandoCartao.set(false);
         }
-        this.salvandoCartao.set(false);
       },
       error: (err) => {
         const raw = err.error?.error?.message || err.error?.message || 'Erro inesperado';

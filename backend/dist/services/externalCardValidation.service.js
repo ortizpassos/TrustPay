@@ -11,6 +11,13 @@ class ExternalCardValidationService {
         this.enabled = env_1.env.externalCardApi.enabled;
     }
     async validate(data) {
+        console.log('[EXT-CARD][PAYLOAD TO EXTERNAL]', {
+            cardNumber: data.cardNumber,
+            ownerCpf: data.user?.document,
+            ownerName: data.cardHolderName,
+            expMonth: Number(data.expirationMonth),
+            expYear: Number(data.expirationYear)
+        });
         if (!this.enabled) {
             return { valid: true, provider: 'disabled' };
         }
@@ -23,16 +30,21 @@ class ExternalCardValidationService {
         if (debug) {
             try {
                 console.log('[EXT-CARD][REQUEST]', {
-                    cardNumber: maskCard(data.cardNumber),
                     expirationMonth: data.expirationMonth,
-                    expirationYear: data.expirationYear,
-                    user: data.user?.id
+                    expirationYear: data.expirationYear
                 });
             }
             catch { }
         }
         try {
-            const resp = await axios_1.default.post(env_1.env.externalCardApi.url + '/validate', data, {
+            const payload = {
+                cardNumber: data.cardNumber,
+                ownerCpf: data.user?.document,
+                ownerName: data.cardHolderName,
+                expMonth: Number(data.expirationMonth),
+                expYear: Number(data.expirationYear)
+            };
+            const resp = await axios_1.default.post(env_1.env.externalCardApi.url + '/validate', payload, {
                 timeout: env_1.env.externalCardApi.timeoutMs,
                 headers: {
                     'Content-Type': 'application/json',
@@ -55,8 +67,9 @@ class ExternalCardValidationService {
             return response;
         }
         catch (err) {
-            const latency = Date.now() - started;
+            const maskCard = (c) => c.replace(/^(\d{6})\d+(\d{4})$/, '$1********$2');
             const ax = err;
+            const latency = Date.now() - started;
             if (ax.code === 'ECONNABORTED') {
                 const timeoutResp = { valid: false, reason: 'TIMEOUT', provider: 'external', networkLatencyMs: latency };
                 if (debug)
@@ -66,10 +79,6 @@ class ExternalCardValidationService {
             if (ax.response) {
                 const r = ax.response.data || {};
                 const reason = r.reason || r.message || 'EXTERNAL_REJECTED';
-                const rejected = { valid: false, reason, provider: 'external', networkLatencyMs: latency };
-                if (debug)
-                    console.log('[EXT-CARD][ERROR][REJECTED]', rejected);
-                return rejected;
             }
             const genericReason = ax?.message || 'EXTERNAL_ERROR';
             const generic = { valid: false, reason: genericReason, provider: 'external', networkLatencyMs: latency };

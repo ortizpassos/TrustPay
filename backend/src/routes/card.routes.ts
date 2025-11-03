@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { cardController } from '../controllers/card.controller';
 import { authenticate } from '../middleware/auth';
 import { validateCard } from '../utils/cardValidation';
-import { saveCardSchema, updateCardSchema } from '../utils/cardValidation';
+import { saveCardSchema } from '../utils/cardValidation';
 
 const router = Router();
 
@@ -11,9 +11,13 @@ router.use(authenticate);
 
 // Operações CRUD de cartão
 router.get('/', cardController.getUserCards);
-router.post('/', validateCard(saveCardSchema), cardController.saveCard);
+// Loga o body bruto antes da validação para depuração
+router.post('/', (req, res, next) => {
+	console.log('[CARD_ROUTES][BODY BRUTO RECEBIDO]:', req.body);
+	next();
+}, validateCard(saveCardSchema), cardController.saveCard);
 router.get('/:cardId', cardController.getCard);
-router.put('/:cardId', validateCard(updateCardSchema), cardController.updateCard);
+router.put('/:cardId', validateCard(saveCardSchema), cardController.updateCard);
 router.delete('/:cardId', cardController.deleteCard);
 
 // Gestão de cartão

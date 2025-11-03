@@ -57,7 +57,6 @@ exports.merchantController = {
                 expirationYear,
                 cvv,
                 user: {
-                    id: tx._id.toString(),
                     email: tx.customer?.email || 'unknown@merchant.local',
                     firstName: firstName || undefined,
                     lastName: lastName || undefined

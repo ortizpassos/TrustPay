@@ -62,6 +62,7 @@ export interface CreditCardPaymentRequest {
   transactionId: string;
   cardNumber: string;
   cardHolderName: string;
+  cardHolderCpf: string;
   expirationMonth: string;
   expirationYear: string;
   cvv: string;

@@ -68,6 +68,10 @@
               <label>Nome Impresso</label>
               <input type="text" [(ngModel)]="novoCartao().cardHolderName" name="cardHolderName" placeholder="EX: JOAO SILVA" />
             </div>
+            <div class="field">
+              <label>CPF do Titular</label>
+              <input type="text" [(ngModel)]="novoCartao().cardHolderCpf" name="cardHolderCpf" placeholder="000.000.000-00" maxlength="14" />
+            </div>
             <div class="field small">
               <label>Mês</label>
               <input type="text" maxlength="2" [(ngModel)]="novoCartao().expirationMonth" name="expirationMonth" placeholder="MM" />

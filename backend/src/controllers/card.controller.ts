@@ -32,8 +32,24 @@ class CardController {
 
   // Salvar um novo cartão
   saveCard = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const user = req.user as IUser;
-    const { cardNumber, cardHolderName, expirationMonth, expirationYear, cvv, isDefault } = req.body;
+  console.log('[CARD_CONTROLLER][REQUEST BODY - RECEBIDO NO CONTROLLER]:', JSON.stringify(req.body));
+  // Log detalhado dos campos recebidos para depuração
+  console.log('[CARD_CONTROLLER][Campos recebidos]:', {
+    cardNumber: req.body.cardNumber,
+    cardHolderName: req.body.cardHolderName,
+    cardHolderCpf: req.body.cardHolderCpf,
+    expirationMonth: req.body.expirationMonth,
+    expirationYear: req.body.expirationYear,
+    cvv: req.body.cvv,
+    isDefault: req.body.isDefault
+  });
+  const user = req.user as IUser;
+  // Garantir extração do campo cardHolderCpf
+  let cardHolderCpf = req.body.cardHolderCpf;
+  if (!cardHolderCpf) {
+    console.warn('[CARD_CONTROLLER][AVISO] Campo cardHolderCpf não recebido no body. Campos recebidos:', Object.keys(req.body));
+  }
+  const { cardNumber, cardHolderName, expirationMonth, expirationYear, cvv, isDefault } = req.body;
 
     try {
       // Guarda defensiva caso o middleware de validação tenha sido pulado ou payload esteja incorreto
@@ -63,6 +79,7 @@ class CardController {
       }
 
   // Validação externa do cartão
+      console.log('[CARD_CONTROLLER][CPF para validação externa]:', cardHolderCpf);
       const externalResult = await externalCardValidationService.validate({
         cardNumber,
         cardHolderName,
@@ -70,10 +87,10 @@ class CardController {
         expirationYear,
         cvv,
         user: {
-          id: user._id.toString(),
           email: user.email,
           firstName: (user as any).firstName,
-          lastName: (user as any).lastName
+          lastName: (user as any).lastName,
+          document: cardHolderCpf ? String(cardHolderCpf) : undefined
         }
       });
 
@@ -86,13 +103,13 @@ class CardController {
         });
       }
 
-      if (!externalResult.valid) {
-        throw new AppError(
-          `Cartão rejeitado pela validação externa${externalResult.reason ? ': ' + externalResult.reason : ''}`,
-          422,
-          'EXTERNAL_CARD_VALIDATION_FAILED'
-        );
-      }
+          if (!externalResult.valid) {
+            res.status(422).json({
+              message: externalResult.reason || 'Cartão rejeitado pela validação externa',
+              success: false
+            });
+            return;
+          }
 
       const tokenizedCard = encryptionService.tokenizeCard({
         cardNumber,
@@ -103,11 +120,12 @@ class CardController {
 
       const savedCard = new SavedCard({
         userId: user._id,
-    cardToken: tokenizedCard.token, // Armazena token determinístico
-    encryptedData: tokenizedCard.encryptedData, // Armazena payload criptografado para detokenização futura
+        cardToken: tokenizedCard.token, // Armazena token determinístico
+        encryptedData: tokenizedCard.encryptedData, // Armazena payload criptografado para detokenização futura
         lastFourDigits: tokenizedCard.lastFourDigits,
         cardBrand,
         cardHolderName,
+        cardHolderCpf: req.body.cardHolderCpf, // Adiciona CPF do titular
         expirationMonth,
         expirationYear,
         isDefault: isDefault || false
@@ -115,14 +133,12 @@ class CardController {
 
       await savedCard.save();
 
-      const response: CardResponse = {
+      // Resposta compatível com o formato solicitado
+      res.status(201).json({
         success: true,
-        data: {
-          card: savedCard.toJSON(),
-          message: 'Cartão salvo com sucesso (validado externamente)'
-        }
-      };
-      res.status(201).json(response);
+        valid: true,
+        reasons: externalResult.reasons || {},
+      });
     } catch (error: any) {
   const isDev = process.env.NODE_ENV !== 'production';
       if (isDev) {
@@ -130,44 +146,29 @@ class CardController {
       }
 
     // Propaga AppError já classificado (evita perder o code)
-      if (error instanceof AppError) {
-        throw error;
-      }
-
-    // Chave duplicada (cardToken) -> cartão já existe
-      if (error?.code === 11000) {
-        throw new AppError('Este cartão já está salvo', 400, 'CARD_ALREADY_EXISTS');
-      }
-
-    // Cartão expirado detectado pelo hook pre-save
-      if (error?.message && /Card has expired/i.test(error.message)) {
-        throw new AppError('Cartão expirado', 400, 'CARD_EXPIRED');
-      }
-
-    // Tamanho da chave de criptografia inválido / chave ausente
-      if (error?.message && /ENCRYPTION_KEY must be exactly 32 characters long/i.test(error.message)) {
-        throw new AppError('Chave de criptografia inválida ou ausente (32 caracteres obrigatórios)', 500, 'ENCRYPTION_KEY_INVALID');
-      }
+    if (error instanceof AppError) {
+      throw error;
+    }
 
     // Falha genérica de criptografia
-      if (error?.message && /Encryption failed/i.test(error.message)) {
-        throw new AppError('Falha no processo de criptografia', 500, 'ENCRYPTION_ERROR');
-      }
+    if (error?.message && /Encryption failed/i.test(error.message)) {
+      throw new AppError('Falha no processo de criptografia', 500, 'ENCRYPTION_ERROR');
+    }
 
     // Erro de validação do Mongoose (caso extremo)
-      if (error?.name === 'ValidationError') {
-        throw new AppError('Falha na validação do cartão na camada de persistência', 400, 'CARD_PERSIST_VALIDATION_ERROR');
-      }
+    if (error?.name === 'ValidationError') {
+      throw new AppError('Falha na validação do cartão na camada de persistência', 400, 'CARD_PERSIST_VALIDATION_ERROR');
+    }
 
     // Fallback genérico
-      const baseMessage = 'Falha ao salvar cartão';
-      throw new AppError(
-        isDev && error?.message ? `${baseMessage}: ${error.message}` : baseMessage,
-        500,
-        'CARD_SAVE_ERROR'
-      );
-    }
-  });
+    const baseMessage = 'Falha ao salvar cartão';
+    throw new AppError(
+      isDev && error?.message ? `${baseMessage}: ${error.message}` : baseMessage,
+      500,
+      'CARD_SAVE_ERROR'
+    );
+  }
+});
 
   // Buscar cartão específico
   getCard = asyncHandler(async (req: Request, res: Response): Promise<void> => {

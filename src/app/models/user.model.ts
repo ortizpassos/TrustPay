@@ -62,6 +62,7 @@ export interface SavedCard {
 export interface SaveCardRequest {
   cardNumber: string;
   cardHolderName: string;
+  cardHolderCpf: string;
   expirationMonth: string;
   expirationYear: string;
   cvv: string;
