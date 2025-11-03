@@ -113,16 +113,44 @@ class CardController {
                     console.error('[CARD_SAVE_ERROR] Root cause:', error);
                 }
                 if (error instanceof errorHandler_1.AppError) {
-                    throw error;
+                    res.status(error.statusCode || 400).json({
+                        success: false,
+                        error: {
+                            message: error.message,
+                            code: error.code || 'CARD_SAVE_ERROR'
+                        }
+                    });
+                    return;
                 }
                 if (error?.message && /Encryption failed/i.test(error.message)) {
-                    throw new errorHandler_1.AppError('Falha no processo de criptografia', 500, 'ENCRYPTION_ERROR');
+                    res.status(500).json({
+                        success: false,
+                        error: {
+                            message: 'Falha no processo de criptografia',
+                            code: 'ENCRYPTION_ERROR'
+                        }
+                    });
+                    return;
                 }
                 if (error?.name === 'ValidationError') {
-                    throw new errorHandler_1.AppError('Falha na validação do cartão na camada de persistência', 400, 'CARD_PERSIST_VALIDATION_ERROR');
+                    res.status(400).json({
+                        success: false,
+                        error: {
+                            message: 'Falha na validação do cartão na camada de persistência',
+                            code: 'CARD_PERSIST_VALIDATION_ERROR'
+                        }
+                    });
+                    return;
                 }
                 const baseMessage = 'Falha ao salvar cartão';
-                throw new errorHandler_1.AppError(isDev && error?.message ? `${baseMessage}: ${error.message}` : baseMessage, 500, 'CARD_SAVE_ERROR');
+                res.status(500).json({
+                    success: false,
+                    error: {
+                        message: isDev && error?.message ? `${baseMessage}: ${error.message}` : baseMessage,
+                        code: 'CARD_SAVE_ERROR'
+                    }
+                });
+                return;
             }
         });
         this.getCard = (0, errorHandler_1.asyncHandler)(async (req, res) => {

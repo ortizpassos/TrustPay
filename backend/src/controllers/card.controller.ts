@@ -140,34 +140,58 @@ class CardController {
         reasons: externalResult.reasons || {},
       });
     } catch (error: any) {
-  const isDev = process.env.NODE_ENV !== 'production';
+      const isDev = process.env.NODE_ENV !== 'production';
       if (isDev) {
         console.error('[CARD_SAVE_ERROR] Root cause:', error);
       }
 
-    // Propaga AppError já classificado (evita perder o code)
-    if (error instanceof AppError) {
-      throw error;
-    }
+      // Propaga AppError já classificado (evita perder o code)
+      if (error instanceof AppError) {
+        res.status(error.statusCode || 400).json({
+          success: false,
+          error: {
+            message: error.message,
+            code: error.code || 'CARD_SAVE_ERROR'
+          }
+        });
+        return;
+      }
 
-    // Falha genérica de criptografia
-    if (error?.message && /Encryption failed/i.test(error.message)) {
-      throw new AppError('Falha no processo de criptografia', 500, 'ENCRYPTION_ERROR');
-    }
+      // Falha genérica de criptografia
+      if (error?.message && /Encryption failed/i.test(error.message)) {
+        res.status(500).json({
+          success: false,
+          error: {
+            message: 'Falha no processo de criptografia',
+            code: 'ENCRYPTION_ERROR'
+          }
+        });
+        return;
+      }
 
-    // Erro de validação do Mongoose (caso extremo)
-    if (error?.name === 'ValidationError') {
-      throw new AppError('Falha na validação do cartão na camada de persistência', 400, 'CARD_PERSIST_VALIDATION_ERROR');
-    }
+      // Erro de validação do Mongoose (caso extremo)
+      if (error?.name === 'ValidationError') {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'Falha na validação do cartão na camada de persistência',
+            code: 'CARD_PERSIST_VALIDATION_ERROR'
+          }
+        });
+        return;
+      }
 
-    // Fallback genérico
-    const baseMessage = 'Falha ao salvar cartão';
-    throw new AppError(
-      isDev && error?.message ? `${baseMessage}: ${error.message}` : baseMessage,
-      500,
-      'CARD_SAVE_ERROR'
-    );
-  }
+      // Fallback genérico
+      const baseMessage = 'Falha ao salvar cartão';
+      res.status(500).json({
+        success: false,
+        error: {
+          message: isDev && error?.message ? `${baseMessage}: ${error.message}` : baseMessage,
+          code: 'CARD_SAVE_ERROR'
+        }
+      });
+      return;
+    }
 });
 
   // Buscar cartão específico
