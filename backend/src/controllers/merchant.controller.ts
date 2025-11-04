@@ -53,41 +53,77 @@ export const merchantController = {
     if (tx.paymentMethod !== 'credit_card') throw new AppError('Invalid payment method', 400, 'INVALID_PAYMENT_METHOD');
     if (tx.status !== 'PENDING') throw new AppError('Transaction not capturable', 400, 'INVALID_STATUS');
 
-    // Monta payload para API externa de validação de pagamento
+    // Buscar nome do usuário pelo merchantId
+    const { User } = require('../models/User');
+    let merchantName = tx.merchantId || 'E-Commerce';
+    const user = await User.findOne({ merchantKey: tx.merchantId });
+    if (user) {
+      merchantName = `${user.firstName} ${user.lastName}`;
+    }
+    // Monta payload para API externa de compra
     const externalPayload = {
       typePayment: 'CREDIT',
       amount: tx.amount,
       currency: tx.currency,
-      merchantName: tx.merchantId || 'E-Commerce',
+      merchantName,
       cardNumber,
       installmentsTotal: tx.installments?.quantity || 1,
-      mcc: '5732', // exemplo fixo, pode ser dinâmico
-      category: 'ELETRONICOS', // exemplo fixo, pode ser dinâmico
+      mcc: '5732',
+      category: 'ELETRONICOS',
       createdAt: tx.createdAt.toISOString()
     };
-    // Chama API externa
+    // Log do payload enviado para API externa
+    console.log('Payload para EXTERNAL_PURCHASE_API_URL:', JSON.stringify(externalPayload, null, 2));
+    // Chama API externa de compra
     const axios = require('axios');
     let externalResp;
     try {
-      externalResp = await axios.post(process.env.EXTERNAL_CARD_API_URL, externalPayload, {
-        headers: { 'Content-Type': 'application/json', 'X-API-KEY': process.env.EXTERNAL_CARD_API_KEY }
+      externalResp = await axios.post(process.env.EXTERNAL_PURCHASE_API_URL, externalPayload, {
+        headers: {}
       });
     } catch (e) {
-      throw new AppError('Erro ao validar pagamento externo', 502, 'EXTERNAL_API_ERROR');
+      res.status(502).json({ success: false, error: { message: 'Erro ao processar pagamento externo', code: 'EXTERNAL_API_ERROR' } });
+    }
+    if (!externalResp) {
+      // Se não houve resposta externa, não continue
+      return;
     }
     const extData = externalResp?.data;
-    if (!extData?.success || extData?.status !== 'AUTHORIZED') {
-      throw new AppError('Pagamento não autorizado pela API externa', 422, 'EXTERNAL_PAYMENT_NOT_AUTHORIZED');
+    if (extData?.success && extData?.status === 'AUTHORIZED') {
+      // Pagamento aprovado
+      tx.status = 'APPROVED';
+      tx.bankTransactionId = `txn_${Math.random().toString(36).slice(2)}`;
+      tx.gatewayResponse = {
+        authCode: '0AFF3C',
+        cardBrand: 'visa',
+        lastFourDigits: String(cardNumber).slice(-4)
+      };
+      await tx.save();
+  res.json({
+        success: true,
+        data: {
+          transaction: {
+            ...tx.toJSON(),
+            status: 'APPROVED',
+            bankTransactionId: tx.bankTransactionId,
+            gatewayResponse: tx.gatewayResponse
+          },
+          status: 'APPROVED',
+          message: 'Transação aprovada'
+        }
+      });
+    } else {
+      // Pagamento recusado
+      tx.status = 'DECLINED';
+      await tx.save();
+  res.status(422).json({
+        success: false,
+        error: {
+          message: 'Pagamento recusado pelo emissor do cartão',
+          code: 'PAYMENT_DECLINED'
+        }
+      });
     }
-
-    // Se autorizado, segue para aprovação
-    const gw = await paymentGatewayService.processCreditCard({ cardNumber, cardHolderName, expirationMonth, expirationYear, cvv }, tx.amount);
-    tx.status = gw.status as any;
-    tx.bankTransactionId = gw.gatewayTransactionId;
-    tx.gatewayResponse = gw.details;
-    await tx.save();
-
-    res.json({ success: gw.success, data: { transaction: tx.toJSON(), status: gw.status, message: gw.message } });
   }),
 
   // POST /payments/:id/refund
