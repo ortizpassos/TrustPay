@@ -44,8 +44,32 @@ export class DeveloperPage {
     }
   ];
   selectedPayloadType = 'payment';
+  selectedRoute = 'intents'; // 'intents' ou 'capture'
+  paymentId: string = '';
+  defaultIntentPayload = {"orderId":"ORDER-12345","amount":19990,"currency":"BRL","paymentMethod":"credit_card","customer":{"name":"Joao Silva","email":"joao@example.com"},"callbackUrl":"https://seuecommerce.com/webhooks/trustpay","returnUrl":"https://seuecommerce.com/checkout/success"};
   get selectedPayload() {
+    if (this.selectedRoute === 'intents') {
+      return this.defaultIntentPayload;
+    }
     return this.payloadOptions.find(opt => opt.value === this.selectedPayloadType)?.payload;
+  }
+  // Atualiza o payload automaticamente ao trocar rota
+  ngDoCheck() {
+    if (this.selectedRoute === 'intents') {
+      this.selectedPayloadType = 'payment';
+      this.signBody = JSON.stringify(this.defaultIntentPayload);
+    } else if (this.selectedRoute === 'capture') {
+      this.signBody = JSON.stringify(this.payloadOptions.find(opt => opt.value === 'card')?.payload);
+    }
+  }
+  get routePath() {
+    if (this.selectedRoute === 'intents') {
+      return '/api/merchant/v1/payment-intents';
+    }
+    if (this.selectedRoute === 'capture') {
+      return `/api/merchant/v1/payments/${this.paymentId}/capture`;
+    }
+    return '';
   }
   preencherHeaders() {
     // Busca as chaves do usuário do backend antes de gerar os headers
@@ -182,8 +206,8 @@ curl -sS -X POST \\
   // Removido construtor duplicado
 
   testarEndpoint() {
+    this.signPath = this.routePath;
     const url = this.baseUrl + this.signPath;
-    // Para GET, não envie body nem Content-Type
     let headers: HttpHeaders;
     let options: any = { observe: 'response' };
     if (this.signMethod === 'GET') {
@@ -193,7 +217,6 @@ curl -sS -X POST \\
         'x-signature': this.signSignatureHex
       });
       options.headers = headers;
-      // Nunca envie body em GET, mesmo se o usuário preencher
       options.body = undefined;
     } else {
       headers = new HttpHeaders({
@@ -216,7 +239,39 @@ curl -sS -X POST \\
     }
     this.http.request(this.signMethod, url, options)
       .subscribe({
-        next: res => this.testResult = res,
+        next: res => {
+          this.testResult = res;
+          // Se for intents, capturar id automaticamente
+          let body: any = undefined;
+          if (res && typeof res === 'object') {
+            if ('body' in res && typeof (res as any).body === 'string') {
+              try {
+                body = JSON.parse((res as any).body);
+              } catch {
+                body = (res as any).body;
+              }
+            } else if ('body' in res) {
+              body = (res as any).body;
+            } else {
+              body = res;
+            }
+          }
+          if (this.selectedRoute === 'intents') {
+            const id = body?.data?._id || body?.data?.id || body?._id || body?.id;
+            if (id) {
+              this.paymentId = id;
+              setTimeout(() => {
+                if (confirm('Intent criada com sucesso. Deseja testar a rota capture com este id?')) {
+                  this.selectedRoute = 'capture';
+                  this.selectedPayloadType = 'card';
+                  this.signBody = JSON.stringify(this.selectedPayload);
+                  this.signPath = this.routePath;
+                  this.generateSignature();
+                }
+              }, 100);
+            }
+          }
+        },
         error: err => this.testResult = err
       });
   }

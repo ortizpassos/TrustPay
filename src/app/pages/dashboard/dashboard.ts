@@ -124,10 +124,18 @@ export class DashboardComponent {
           console.log('[FRONTEND][PAYLOAD ENVIADO PARA BACKEND]', payload);
           this.cardService.saveCard(payload).subscribe({
             next: (resp) => {
-              if (resp.success && resp.card) {
-                // Adiciona o novo cartão à lista imediatamente
+              let novoCartaoSalvo: SavedCard | undefined = undefined;
+              if (resp.success) {
+                // Aceita tanto resp.card quanto resp.data (caso seja objeto)
+                if (resp.card) {
+                  novoCartaoSalvo = resp.card;
+                } else if (resp.data && !Array.isArray(resp.data)) {
+                  novoCartaoSalvo = resp.data as SavedCard;
+                }
+              }
+              if (novoCartaoSalvo) {
                 const listaAtual = this.cartoes();
-                this.cartoes.set([resp.card, ...listaAtual]);
+                this.cartoes.set([novoCartaoSalvo, ...listaAtual]);
                 this.novoCartao.set({ cardNumber: '', cardHolderName: '', cardHolderCpf: '', expirationMonth: '', expirationYear: '', cvv: '', isDefault: false });
                 this.mostrarFormularioNovoCartao.set(false);
                 this.errosCartao.set(['Cartão salvo com sucesso']);

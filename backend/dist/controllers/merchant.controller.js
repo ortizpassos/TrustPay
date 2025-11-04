@@ -4,7 +4,6 @@ exports.merchantController = void 0;
 const Transaction_1 = require("../models/Transaction");
 const paymentGateway_service_1 = require("../services/paymentGateway.service");
 const errorHandler_1 = require("../middleware/errorHandler");
-const externalCardValidation_service_1 = require("../services/externalCardValidation.service");
 exports.merchantController = {
     createPaymentIntent: (0, errorHandler_1.asyncHandler)(async (req, res) => {
         const merchantKey = req.merchant.merchantKey;
@@ -47,29 +46,30 @@ exports.merchantController = {
             throw new errorHandler_1.AppError('Invalid payment method', 400, 'INVALID_PAYMENT_METHOD');
         if (tx.status !== 'PENDING')
             throw new errorHandler_1.AppError('Transaction not capturable', 400, 'INVALID_STATUS');
+        const externalPayload = {
+            typePayment: 'CREDIT',
+            amount: tx.amount,
+            currency: tx.currency,
+            merchantName: tx.merchantId || 'E-Commerce',
+            cardNumber,
+            installmentsTotal: tx.installments?.quantity || 1,
+            mcc: '5732',
+            category: 'ELETRONICOS',
+            createdAt: tx.createdAt.toISOString()
+        };
+        const axios = require('axios');
+        let externalResp;
         try {
-            const [firstName, ...rest] = String(tx.customer?.name || '').trim().split(' ');
-            const lastName = rest.join(' ').trim();
-            const externalResult = await externalCardValidation_service_1.externalCardValidationService.validate({
-                cardNumber,
-                cardHolderName,
-                expirationMonth,
-                expirationYear,
-                cvv,
-                user: {
-                    email: tx.customer?.email || 'unknown@merchant.local',
-                    firstName: firstName || undefined,
-                    lastName: lastName || undefined
-                }
+            externalResp = await axios.post(process.env.EXTERNAL_CARD_API_URL, externalPayload, {
+                headers: { 'Content-Type': 'application/json', 'X-API-KEY': process.env.EXTERNAL_CARD_API_KEY }
             });
-            if (!externalResult.valid) {
-                throw new errorHandler_1.AppError(`Cartão rejeitado pela validação externa${externalResult.reason ? ': ' + externalResult.reason : ''}`, 422, 'EXTERNAL_CARD_VALIDATION_FAILED');
-            }
         }
         catch (e) {
-            if (e instanceof errorHandler_1.AppError)
-                throw e;
-            throw new errorHandler_1.AppError('Falha na validação externa do cartão', 422, 'EXTERNAL_CARD_VALIDATION_ERROR');
+            throw new errorHandler_1.AppError('Erro ao validar pagamento externo', 502, 'EXTERNAL_API_ERROR');
+        }
+        const extData = externalResp?.data;
+        if (!extData?.success || extData?.status !== 'AUTHORIZED') {
+            throw new errorHandler_1.AppError('Pagamento não autorizado pela API externa', 422, 'EXTERNAL_PAYMENT_NOT_AUTHORIZED');
         }
         const gw = await paymentGateway_service_1.paymentGatewayService.processCreditCard({ cardNumber, cardHolderName, expirationMonth, expirationYear, cvv }, tx.amount);
         tx.status = gw.status;

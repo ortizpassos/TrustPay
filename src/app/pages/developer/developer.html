@@ -67,11 +67,21 @@
               </div>
               <h2>Gear Headers e Payloads para testes</h2>
               <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                <label for="routeSelect" class="form-label">Rota:</label>
+                <select id="routeSelect" [(ngModel)]="selectedRoute" class="form-select" style="max-width:180px; margin-right:8px;">
+                  <option value="intents">Criar Intent</option>
+                  <option value="capture">Capturar Pagamento</option>
+                </select>
                 <label for="payloadSelect" class="form-label">Payload:</label>
-                <select id="payloadSelect" [(ngModel)]="selectedPayloadType" class="form-select" style="max-width:220px; margin-right:8px;">
+                <select id="payloadSelect" [(ngModel)]="selectedPayloadType" class="form-select" style="max-width:180px; margin-right:8px;">
                   <option *ngFor="let opt of payloadOptions" [value]="opt.value">{{ opt.label }}</option>
                 </select>
+                <ng-container *ngIf="selectedRoute === 'capture'">
+                  <label for="paymentId" class="form-label">ID do Pagamento:</label>
+                  <input id="paymentId" [(ngModel)]="paymentId" class="form-control" style="max-width:180px; margin-right:8px;" placeholder="ID do intent" />
+                </ng-container>
                 <button class="btn-primary" type="button" (click)="preencherHeaders()">Gerar headers</button>
+                <button class="btn-success" type="button" (click)="testarEndpoint()">Testar</button>
               </div>
             </div>
             <div>
