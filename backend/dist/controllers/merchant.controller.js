@@ -72,46 +72,30 @@ exports.merchantController = {
             });
         }
         catch (e) {
+            const err = e;
+            if (err.response && [400, 422, 500].includes(err.response.status)) {
+                tx.status = 'DECLINED';
+                tx.gatewayResponse = err.response.data;
+                await tx.save();
+                res.status(err.response.status).json(err.response.data);
+                return;
+            }
             res.status(502).json({ success: false, error: { message: 'Erro ao processar pagamento externo', code: 'EXTERNAL_API_ERROR' } });
+            return;
         }
         if (!externalResp) {
             return;
         }
         const extData = externalResp?.data;
-        if (extData?.success && extData?.status === 'AUTHORIZED') {
+        if (extData?.status === 'AUTHORIZED') {
             tx.status = 'APPROVED';
-            tx.bankTransactionId = `txn_${Math.random().toString(36).slice(2)}`;
-            tx.gatewayResponse = {
-                authCode: '0AFF3C',
-                cardBrand: 'visa',
-                lastFourDigits: String(cardNumber).slice(-4)
-            };
-            await tx.save();
-            res.json({
-                success: true,
-                data: {
-                    transaction: {
-                        ...tx.toJSON(),
-                        status: 'APPROVED',
-                        bankTransactionId: tx.bankTransactionId,
-                        gatewayResponse: tx.gatewayResponse
-                    },
-                    status: 'APPROVED',
-                    message: 'Transação aprovada'
-                }
-            });
         }
         else {
             tx.status = 'DECLINED';
-            await tx.save();
-            res.status(422).json({
-                success: false,
-                error: {
-                    message: 'Pagamento recusado pelo emissor do cartão',
-                    code: 'PAYMENT_DECLINED'
-                }
-            });
         }
+        tx.gatewayResponse = extData;
+        await tx.save();
+        res.status(externalResp.status).json(extData);
     }),
     refundPayment: (0, errorHandler_1.asyncHandler)(async (req, res) => {
         const merchantKey = req.merchant.merchantKey;
