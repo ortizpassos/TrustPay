@@ -19,10 +19,17 @@ class PaymentController {
   recentTransactions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const user = req.user as IUser;
     const limit = Math.min(parseInt((req.query.limit as string) || '5', 10), 20); // hard cap 20
-    const transactions = await Transaction.find({ userId: user._id })
+    const merchantId = req.query.merchantId as string | undefined;
+    let filter: any = {};
+    if (merchantId) {
+      filter.merchantId = merchantId;
+    } else {
+      filter.userId = user._id;
+    }
+    const transactions = await Transaction.find(filter)
       .sort({ createdAt: -1 })
       .limit(limit)
-      .select('orderId amount currency paymentMethod status createdAt updatedAt recipientUserId recipientPixKey installments');
+      .select('orderId amount currency paymentMethod status createdAt updatedAt recipientUserId recipientPixKey installments merchantId');
 
     res.json({
       success: true,
@@ -32,7 +39,7 @@ class PaymentController {
       }
     });
   });
-  // Iniciar uma nova transação de pagamento (suporta recebedor e parcelamento)
+  // Iniciar uma nova transação de pagamento (suporta recebedor, parcelamento e transferência interna)
   initiatePayment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { 
       orderId, 
@@ -44,31 +51,85 @@ class PaymentController {
       callbackUrl,
       recipientUserId,
       recipientPixKey,
-      installments
+      installments,
+      from,
+      to,
+      cardId
     } = req.body;
     const user = req.user as IUser;
 
-  // Verifica se orderId já existe para este usuário com transação ativa
+    // Verifica se orderId já existe para este usuário com transação ativa
     const existingTransaction = await Transaction.findOne({
       orderId,
       userId: user._id,
       status: { $in: ['PENDING', 'PROCESSING', 'APPROVED'] }
     });
-
     if (existingTransaction) {
       throw new AppError('Order ID already exists with active transaction', 400, 'DUPLICATE_ORDER_ID');
     }
 
-  // Validação básica do recebedor (apenas um modo permitido)
+    // Transferência interna via saldo
+    if (paymentMethod === 'internal_transfer' || paymentMethod === 'saldo') {
+      if (!from?.email || !to?.email) {
+        throw new AppError('Dados do remetente ou destinatário ausentes', 400, 'MISSING_TRANSFER_DATA');
+      }
+      if (from.email === to.email) {
+        throw new AppError('Não é possível transferir para si mesmo', 400, 'TRANSFER_TO_SELF');
+      }
+      // Buscar usuários
+      const remetente = await User.findOne({ email: from.email.toLowerCase() });
+      const destinatario = await User.findOne({ email: to.email.toLowerCase() });
+      if (!remetente || !destinatario) {
+        throw new AppError('Usuário remetente ou destinatário não encontrado', 404, 'USER_NOT_FOUND');
+      }
+      // Calcular saldo do remetente: recebido = recipientUserId, enviado = userId
+      const recebidos = await Transaction.aggregate([
+        { $match: { recipientUserId: remetente._id.toString(), status: 'APPROVED' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+      const enviados = await Transaction.aggregate([
+        { $match: { userId: remetente._id.toString(), status: 'APPROVED' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+      const saldo = (recebidos[0]?.total || 0) - (enviados[0]?.total || 0);
+      if (saldo < amount) {
+        throw new AppError('Saldo insuficiente para transferência', 400, 'INSUFFICIENT_FUNDS');
+      }
+      // Criar transação aprovada
+      const transaction = new Transaction({
+        orderId,
+        userId: remetente._id,
+        recipientUserId: destinatario._id,
+        amount,
+        currency: currency || 'BRL',
+        paymentMethod: 'internal_transfer',
+        status: 'APPROVED',
+        customer: {
+          name: remetente.firstName + ' ' + remetente.lastName,
+          email: remetente.email,
+          document: remetente.document
+        },
+        returnUrl: returnUrl || '',
+        callbackUrl: callbackUrl || ''
+      });
+      await transaction.save();
+      const response: PaymentResponse = {
+        success: true,
+        data: transaction.toJSON()
+      };
+      res.status(201).json(response);
+      return;
+    }
+
+    // Validação básica do recebedor (apenas um modo permitido)
     if (recipientUserId && recipientPixKey) {
       throw new AppError('Only one recipient type allowed (user or pix key)', 400, 'RECIPIENT_CONFLICT');
     }
-
     if (recipientPixKey && !/^[\w@+_.:-]{3,120}$/.test(recipientPixKey)) {
       throw new AppError('Invalid PIX key format', 400, 'INVALID_PIX_KEY');
     }
 
-  // Trata parcelamento (somente para cartão de crédito)
+    // Trata parcelamento (somente para cartão de crédito)
     let finalAmount = amount;
     let installmentsData: any = undefined;
     if (paymentMethod === 'credit_card') {
@@ -85,14 +146,13 @@ class PaymentController {
           mode: 'AVISTA'
         };
       } else {
-  const interestMonthly = 0.03; // 3% ao mês
-  // Fórmula de juros compostos: A = P * (1 + i)^n
+        const interestMonthly = 0.03; // 3% ao mês
         const totalWithInterest = parseFloat((amount * Math.pow(1 + interestMonthly, qty)).toFixed(2));
         const installmentValue = parseFloat((totalWithInterest / qty).toFixed(2));
         finalAmount = totalWithInterest;
         installmentsData = {
           quantity: qty,
-            interestMonthly,
+          interestMonthly,
           totalWithInterest,
           installmentValue,
           mode: 'PARCELADO'
@@ -102,7 +162,7 @@ class PaymentController {
       throw new AppError('Installments only supported for credit card', 400, 'INSTALLMENTS_NOT_ALLOWED');
     }
 
-  // Cria nova transação com campos estendidos
+    // Cria nova transação com campos estendidos
     const transaction = new Transaction({
       orderId,
       userId: user._id,
@@ -377,7 +437,13 @@ class PaymentController {
     const skip = (pageNumber - 1) * limitNumber;
 
   // Monta filtros dinâmicos
-    const query: any = { userId: user._id };
+    let query: any = {};
+    const merchantId = req.query.merchantId as string | undefined;
+    if (merchantId) {
+      query.merchantId = merchantId;
+    } else {
+      query.userId = user._id;
+    }
     
     if (status) {
       query.status = status;

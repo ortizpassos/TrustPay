@@ -58,10 +58,10 @@ exports.registerSchema = joi_1.default.object({
         'string.pattern.base': 'Telefone deve estar no formato (11) 99999-9999'
     }),
     document: joi_1.default.string()
-        .pattern(new RegExp('^\\d{11}$'))
+        .pattern(new RegExp('^(?:\\d{11}|\\d{14})$'))
         .optional()
         .messages({
-        'string.pattern.base': 'Documento deve ser um CPF válido (11 dígitos)'
+        'string.pattern.base': 'Documento deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos)'
     })
 });
 exports.loginSchema = joi_1.default.object({
@@ -171,11 +171,11 @@ exports.updateProfileSchema = joi_1.default.object({
         'string.pattern.base': 'Telefone deve estar no formato (11) 99999-9999'
     }),
     document: joi_1.default.string()
-        .pattern(new RegExp('^\\d{11}$'))
+        .pattern(new RegExp('^(?:\\d{11}|\\d{14})$'))
         .optional()
         .allow('')
         .messages({
-        'string.pattern.base': 'Documento deve ser um CPF válido (11 dígitos)'
+        'string.pattern.base': 'Documento deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos)'
     })
 });
 exports.verifyEmailSchema = joi_1.default.object({

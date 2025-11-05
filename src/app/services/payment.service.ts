@@ -50,12 +50,16 @@ export class PaymentService {
   }
 
   // Obter transações recentes
-  getRecentTransactions(limit = 5): Observable<{ success: boolean; data?: { transactions: Transaction[] } }> {
-    return this.http.get<{ success: boolean; data?: { transactions: Transaction[] } }>(`${this.apiUrl}/payments/recent?limit=${limit}`);
+  getRecentTransactions(limit = 5, merchantId?: string): Observable<{ success: boolean; data?: { transactions: Transaction[] } }> {
+    let url = `${this.apiUrl}/payments/recent?limit=${limit}`;
+    if (merchantId) {
+      url += `&merchantId=${encodeURIComponent(merchantId)}`;
+    }
+    return this.http.get<{ success: boolean; data?: { transactions: Transaction[] } }>(url);
   }
 
   // Histórico paginado de transações
-  getTransactionHistory(options: { page?: number; limit?: number; status?: string; paymentMethod?: string; sort?: string; direction?: 'asc'|'desc' } = {}): Observable<{ success: boolean; data?: { transactions: Transaction[]; pagination: any; sort: string; direction: string } }> {
+  getTransactionHistory(options: { page?: number; limit?: number; status?: string; paymentMethod?: string; sort?: string; direction?: 'asc'|'desc'; merchantId?: string } = {}): Observable<{ success: boolean; data?: { transactions: Transaction[]; pagination: any; sort: string; direction: string } }> {
     const params = new URLSearchParams();
     if (options.page) params.append('page', String(options.page));
     if (options.limit) params.append('limit', String(options.limit));
@@ -63,6 +67,7 @@ export class PaymentService {
     if (options.paymentMethod) params.append('paymentMethod', options.paymentMethod);
     if (options.sort) params.append('sort', options.sort);
     if (options.direction) params.append('direction', options.direction);
+    if (options.merchantId) params.append('merchantId', options.merchantId);
     const qs = params.toString();
     return this.http.get<{ success: boolean; data?: { transactions: Transaction[]; pagination: any; sort: string; direction: string } }>(`${this.apiUrl}/payments${qs ? '?' + qs : ''}`);
   }

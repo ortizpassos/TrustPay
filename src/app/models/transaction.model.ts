@@ -6,7 +6,7 @@ export type TransactionStatus =
   | 'FAILED' 
   | 'EXPIRED';
 
-export type PaymentMethod = 'credit_card' | 'pix';
+export type PaymentMethod = 'credit_card' | 'pix' | 'saldo';
 
 export interface Customer {
   name: string;

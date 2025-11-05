@@ -96,9 +96,10 @@ const UserSchema = new mongoose_1.Schema({
             validator: function (v) {
                 if (!v)
                     return true;
-                return /^\d{11}$/.test(v.replace(/\D/g, ''));
+                const clean = v.replace(/\D/g, '');
+                return /^\d{11}$/.test(clean) || /^\d{14}$/.test(clean);
             },
-            message: 'Document must be a valid CPF (11 digits)'
+            message: 'Document must be a valid CPF (11 digits) or CNPJ (14 digits)'
         }
     },
     isEmailVerified: {

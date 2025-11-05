@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.paymentController = void 0;
 const Transaction_1 = require("../models/Transaction");
+const User_1 = require("../models/User");
 const paymentGateway_service_1 = require("../services/paymentGateway.service");
 const errorHandler_1 = require("../middleware/errorHandler");
 class PaymentController {
@@ -9,10 +10,18 @@ class PaymentController {
         this.recentTransactions = (0, errorHandler_1.asyncHandler)(async (req, res) => {
             const user = req.user;
             const limit = Math.min(parseInt(req.query.limit || '5', 10), 20);
-            const transactions = await Transaction_1.Transaction.find({ userId: user._id })
+            const merchantId = req.query.merchantId;
+            let filter = {};
+            if (merchantId) {
+                filter.merchantId = merchantId;
+            }
+            else {
+                filter.userId = user._id;
+            }
+            const transactions = await Transaction_1.Transaction.find(filter)
                 .sort({ createdAt: -1 })
                 .limit(limit)
-                .select('orderId amount currency paymentMethod status createdAt updatedAt recipientUserId recipientPixKey installments');
+                .select('orderId amount currency paymentMethod status createdAt updatedAt recipientUserId recipientPixKey installments merchantId');
             res.json({
                 success: true,
                 data: {
@@ -22,7 +31,7 @@ class PaymentController {
             });
         });
         this.initiatePayment = (0, errorHandler_1.asyncHandler)(async (req, res) => {
-            const { orderId, amount, currency, paymentMethod, customer, returnUrl, callbackUrl, recipientUserId, recipientPixKey, installments } = req.body;
+            const { orderId, amount, currency, paymentMethod, customer, returnUrl, callbackUrl, recipientUserId, recipientPixKey, installments, from, to, cardId } = req.body;
             const user = req.user;
             const existingTransaction = await Transaction_1.Transaction.findOne({
                 orderId,
@@ -31,6 +40,54 @@ class PaymentController {
             });
             if (existingTransaction) {
                 throw new errorHandler_1.AppError('Order ID already exists with active transaction', 400, 'DUPLICATE_ORDER_ID');
+            }
+            if (paymentMethod === 'internal_transfer' || paymentMethod === 'saldo') {
+                if (!from?.email || !to?.email) {
+                    throw new errorHandler_1.AppError('Dados do remetente ou destinatário ausentes', 400, 'MISSING_TRANSFER_DATA');
+                }
+                if (from.email === to.email) {
+                    throw new errorHandler_1.AppError('Não é possível transferir para si mesmo', 400, 'TRANSFER_TO_SELF');
+                }
+                const remetente = await User_1.User.findOne({ email: from.email.toLowerCase() });
+                const destinatario = await User_1.User.findOne({ email: to.email.toLowerCase() });
+                if (!remetente || !destinatario) {
+                    throw new errorHandler_1.AppError('Usuário remetente ou destinatário não encontrado', 404, 'USER_NOT_FOUND');
+                }
+                const recebidos = await Transaction_1.Transaction.aggregate([
+                    { $match: { recipientUserId: remetente._id.toString(), status: 'APPROVED' } },
+                    { $group: { _id: null, total: { $sum: '$amount' } } }
+                ]);
+                const enviados = await Transaction_1.Transaction.aggregate([
+                    { $match: { userId: remetente._id.toString(), status: 'APPROVED' } },
+                    { $group: { _id: null, total: { $sum: '$amount' } } }
+                ]);
+                const saldo = (recebidos[0]?.total || 0) - (enviados[0]?.total || 0);
+                if (saldo < amount) {
+                    throw new errorHandler_1.AppError('Saldo insuficiente para transferência', 400, 'INSUFFICIENT_FUNDS');
+                }
+                const transaction = new Transaction_1.Transaction({
+                    orderId,
+                    userId: remetente._id,
+                    recipientUserId: destinatario._id,
+                    amount,
+                    currency: currency || 'BRL',
+                    paymentMethod: 'internal_transfer',
+                    status: 'APPROVED',
+                    customer: {
+                        name: remetente.firstName + ' ' + remetente.lastName,
+                        email: remetente.email,
+                        document: remetente.document
+                    },
+                    returnUrl: returnUrl || '',
+                    callbackUrl: callbackUrl || ''
+                });
+                await transaction.save();
+                const response = {
+                    success: true,
+                    data: transaction.toJSON()
+                };
+                res.status(201).json(response);
+                return;
             }
             if (recipientUserId && recipientPixKey) {
                 throw new errorHandler_1.AppError('Only one recipient type allowed (user or pix key)', 400, 'RECIPIENT_CONFLICT');
@@ -264,7 +321,14 @@ class PaymentController {
             const pageNumber = parseInt(page);
             const limitNumber = parseInt(limit);
             const skip = (pageNumber - 1) * limitNumber;
-            const query = { userId: user._id };
+            let query = {};
+            const merchantId = req.query.merchantId;
+            if (merchantId) {
+                query.merchantId = merchantId;
+            }
+            else {
+                query.userId = user._id;
+            }
             if (status) {
                 query.status = status;
             }

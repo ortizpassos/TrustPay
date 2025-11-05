@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { PaymentService } from '../../services/payment.service';
 import { Transaction } from '../../models/transaction.model';
+import { AuthService } from '../../services/auth.service';
+import { User } from '../../models/user.model';
 
 @Component({
   selector: 'app-transactions-page',
@@ -19,6 +21,7 @@ export class TransactionsPage {
   filtroMetodo = '';
   sortField: string = 'createdAt';
   sortDirection: 'asc' | 'desc' = 'desc';
+  usuario: User | null = null;
 
   statusOptions = [
     { value: 'PENDING', label: 'Pendente' },
@@ -29,20 +32,24 @@ export class TransactionsPage {
     { value: 'EXPIRED', label: 'Expirado' }
   ];
 
-  constructor(public paymentService: PaymentService, private router: Router) {
+  constructor(public paymentService: PaymentService, private router: Router, private auth: AuthService) {
+    this.usuario = this.auth.getCurrentUser();
     this.carregar();
   }
 
   carregar(page = 1): void {
     this.carregando.set(true);
-    this.paymentService.getTransactionHistory({
+    const merchantId = this.usuario && this.usuario.merchantKey ? this.usuario.merchantKey : undefined;
+    const params: any = {
       page,
       limit: this.pagination().limit,
       status: this.filtroStatus || undefined,
       paymentMethod: this.filtroMetodo || undefined,
       sort: this.sortField,
       direction: this.sortDirection
-    }).subscribe({
+    };
+    if (merchantId) params.merchantId = merchantId;
+    this.paymentService.getTransactionHistory(params).subscribe({
       next: (resp) => {
         if (resp.success && resp.data?.transactions) {
           this.transacoes.set(resp.data.transactions as Transaction[]);

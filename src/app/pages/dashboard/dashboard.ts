@@ -198,7 +198,9 @@ export class DashboardComponent {
   // ===== Transações Recentes =====
   carregarTransacoesRecentes(limit = 5): void {
     this.carregandoTransacoes.set(true);
-    this.paymentService.getRecentTransactions(limit).subscribe({
+    const usuario = this.usuario();
+    const merchantId = usuario && usuario.merchantKey ? usuario.merchantKey : undefined;
+    this.paymentService.getRecentTransactions(limit, merchantId).subscribe({
       next: (resp) => {
         if (resp.success && resp.data?.transactions) {
           this.transacoesRecentes.set(resp.data.transactions as Transaction[]);

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { PaymentService } from '../../services/payment.service';
+import { CardService } from '../../services/card.service';
 import { PaymentInitiateRequest, PaymentMethod, Transaction } from '../../models/transaction.model';
 import { AuthService } from '../../services/auth.service';
 import { UserService, UserOption } from '../../services/user.service';
@@ -15,18 +16,63 @@ import { Sidebar } from "../../shared/sidebar/sidebar";
   styleUrl: './new-payment.css'
 })
 export class NewPaymentPage {
+  cartaoSelecionado: string | null = null;
+  emailDestinatario = '';
   valor = 100.00;
   metodo: PaymentMethod = 'credit_card';
   parcelas = 1;
   opcoesParcelas = [1,2,3,4,5,6,9,12];
   sidebarOpen = false;
   active: 'carteira' | 'novo' | 'relatorios' | 'config' = 'novo';
-  // ...existing code...
 
   carregando = signal(false);
   erro = signal('');
+  sucesso = signal('');
 
-  constructor(private payment: PaymentService, private router: Router, public auth: AuthService, private users: UserService) {}
+  savedCards: any[] = [];
+  carregandoCartoes = signal(false);
+  semCartaoSalvo = signal(false);
+
+  constructor(
+    private payment: PaymentService,
+    private router: Router,
+    public auth: AuthService,
+    private users: UserService,
+    private cards: CardService
+  ) {}
+
+  ngOnInit() {
+    if (this.metodo === 'credit_card') {
+      this.buscarCartoesSalvos();
+    }
+  }
+
+  buscarCartoesSalvos() {
+    this.carregandoCartoes.set(true);
+    this.cards.getUserCards().subscribe({
+      next: (resp) => {
+        if (resp.success && Array.isArray(resp.data) && resp.data.length > 0) {
+          this.savedCards = resp.data;
+          this.semCartaoSalvo.set(false);
+        } else {
+          this.savedCards = [];
+          this.semCartaoSalvo.set(true);
+        }
+        this.carregandoCartoes.set(false);
+      },
+      error: () => {
+        this.savedCards = [];
+        this.semCartaoSalvo.set(true);
+        this.carregandoCartoes.set(false);
+      }
+    });
+  }
+
+  onMetodoChange() {
+    if (this.metodo === 'credit_card') {
+      this.buscarCartoesSalvos();
+    }
+  }
 
   sair(): void {
     this.auth.logout().subscribe(() => {
@@ -60,8 +106,17 @@ export class NewPaymentPage {
 
   iniciarPagamento(): void {
     this.erro.set('');
+    this.sucesso.set('');
+    if (!this.emailDestinatario || !this.emailDestinatario.includes('@')) {
+      this.erro.set('Informe um e-mail de destinatário válido.');
+      return;
+    }
     if (!this.valor || this.valor <= 0) {
       this.erro.set('Informe um valor válido.');
+      return;
+    }
+    if (this.metodo === 'credit_card' && !this.cartaoSelecionado) {
+      this.erro.set('Selecione um cartão para pagamento.');
       return;
     }
     const currentUser = this.auth.getCurrentUser();
@@ -69,28 +124,49 @@ export class NewPaymentPage {
       this.router.navigate(['/auth']);
       return;
     }
-    const req: PaymentInitiateRequest = {
-      orderId: 'NP-' + Date.now(),
-      amount: this.valor,
-      currency: 'BRL',
-      paymentMethod: this.metodo,
-      customer: {
-        name: `${currentUser.firstName} ${currentUser.lastName}`.trim(),
-        email: currentUser.email,
-        document: currentUser.document
-      },
-      returnUrl: window.location.origin + '/dashboard',
-      callbackUrl: window.location.origin + '/api/callback/mock'
-    };
+    let req: any;
     if (this.metodo === 'credit_card') {
-      req.installments = { quantity: this.parcelas };
+      req = {
+        orderId: 'NP-' + Date.now(),
+        amount: this.valor,
+        currency: 'BRL',
+        paymentMethod: 'credit_card',
+        cardId: this.cartaoSelecionado,
+        installments: { quantity: this.parcelas },
+        from: {
+          email: currentUser.email,
+          name: `${currentUser.firstName} ${currentUser.lastName}`.trim(),
+          document: currentUser.document
+        },
+        to: {
+          email: this.emailDestinatario
+        }
+      };
+    } else if (this.metodo === 'saldo') {
+      req = {
+        orderId: 'NP-' + Date.now(),
+        amount: this.valor,
+        currency: 'BRL',
+        paymentMethod: 'internal_transfer',
+        from: {
+          email: currentUser.email,
+          name: `${currentUser.firstName} ${currentUser.lastName}`.trim(),
+          document: currentUser.document
+        },
+        to: {
+          email: this.emailDestinatario
+        }
+      };
     }
     this.carregando.set(true);
     this.payment.initiatePayment(req).subscribe({
       next: (resp) => {
         if (resp.success && resp.data) {
-          const transacao = resp.data as Transaction;
-          this.router.navigate(['/payment', transacao.id]);
+          this.sucesso.set('Transferência realizada com sucesso!');
+          setTimeout(() => {
+            const transacao = resp.data as Transaction;
+            this.router.navigate(['/payment', transacao.id]);
+          }, 1200);
         } else {
           this.erro.set(resp.error?.message || 'Falha ao iniciar pagamento');
         }

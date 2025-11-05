@@ -103,13 +103,13 @@ export class RegisterComponent implements OnDestroy {
 
     // Validar nome
     if (!this.dadosCadastro.firstName.trim()) {
-      this.erros['firstName'] = 'Nome é obrigatório';
+      this.erros['firstName'] = this.dadosCadastro.accountType === 'loja' ? 'Razão social é obrigatória' : 'Nome é obrigatório';
       isValid = false;
     }
 
     // Validar sobrenome
     if (!this.dadosCadastro.lastName.trim()) {
-      this.erros['lastName'] = 'Sobrenome é obrigatório';
+      this.erros['lastName'] = this.dadosCadastro.accountType === 'loja' ? 'Nome Fantasia é obrigatório' : 'Sobrenome é obrigatório';
       isValid = false;
     }
 
@@ -128,9 +128,9 @@ export class RegisterComponent implements OnDestroy {
       isValid = false;
     }
 
-    // Validar documento (opcional, mas se preenchido deve ser válido)
-    if (this.dadosCadastro.document && !this.authService.validateDocument(this.dadosCadastro.document)) {
-      this.erros['document'] = 'CPF inválido';
+    // Validar documento (CPF ou CNPJ conforme tipo de conta)
+    if (this.dadosCadastro.document && !this.authService.validateDocument(this.dadosCadastro.document, this.dadosCadastro.accountType)) {
+      this.erros['document'] = this.dadosCadastro.accountType === 'loja' ? 'CNPJ inválido' : 'CPF inválido';
       isValid = false;
     }
 
@@ -174,9 +174,9 @@ export class RegisterComponent implements OnDestroy {
       this.dadosCadastro.phone = this.formatPhone(this.dadosCadastro.phone);
     }
 
-    // Formatação automática de CPF
+    // Formatação automática de CPF/CNPJ conforme tipo de conta
     if (field === 'document' && this.dadosCadastro.document) {
-      this.dadosCadastro.document = this.formatCPF(this.dadosCadastro.document);
+      this.dadosCadastro.document = this.formatDocument(this.dadosCadastro.document);
     }
   }
 
@@ -190,12 +190,42 @@ export class RegisterComponent implements OnDestroy {
   }
 
   formatCPF(cpf: string): string {
-    const cleaned = cpf.replace(/\D/g, '');
-    const match = cleaned.match(/^(\d{3})(\d{3})(\d{3})(\d{2})$/);
-    if (match) {
-      return `${match[1]}.${match[2]}.${match[3]}-${match[4]}`;
+    const cleaned = cpf.replace(/\D/g, '').slice(0, 11);
+    if (!cleaned) return '';
+    // Progressive CPF mask: 000.000.000-00
+    const part1 = cleaned.substring(0, 3);
+    const part2 = cleaned.length > 3 ? cleaned.substring(3, 6) : '';
+    const part3 = cleaned.length > 6 ? cleaned.substring(6, 9) : '';
+    const part4 = cleaned.length > 9 ? cleaned.substring(9, 11) : '';
+    let out = part1;
+    if (part2) out += `.${part2}`;
+    if (part3) out += `.${part3}`;
+    if (part4) out += `-${part4}`;
+    return out;
+  }
+
+  formatCNPJ(cnpj: string): string {
+    const cleaned = cnpj.replace(/\D/g, '').slice(0, 14);
+    if (!cleaned) return '';
+    // Progressive CNPJ mask: 00.000.000/0000-00
+    const p1 = cleaned.substring(0, 2);
+    const p2 = cleaned.length > 2 ? cleaned.substring(2, 5) : '';
+    const p3 = cleaned.length > 5 ? cleaned.substring(5, 8) : '';
+    const p4 = cleaned.length > 8 ? cleaned.substring(8, 12) : '';
+    const p5 = cleaned.length > 12 ? cleaned.substring(12, 14) : '';
+    let out = p1;
+    if (p2) out += `.${p2}`;
+    if (p3) out += `.${p3}`;
+    if (p4) out += `/${p4}`;
+    if (p5) out += `-${p5}`;
+    return out;
+  }
+
+  formatDocument(doc: string): string {
+    if (this.dadosCadastro.accountType === 'loja') {
+      return this.formatCNPJ(doc);
     }
-    return cleaned;
+    return this.formatCPF(doc);
   }
 
   togglePasswordVisibility(): void {
