@@ -3,7 +3,7 @@
     <a class="logo" [routerLink]="['/dashboard']" aria-label="Ir para Dashboard">🏠</a>
     <div class="brand-text">
       <h1>TrustPay</h1>
-      <p>{{ user?.sidebarTitle || 'Menu' }}</p>
+      <p>{{ displayName }}</p>
     </div>
   </div>
   <div class="sidebar-actions">
@@ -14,6 +14,7 @@
       @if (user?.accountType === 'loja') {
         <a class="quick-action-btn" [routerLink]="['/desenvolvedor']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeSidebarOnNavigate()"><span class="action-icon">🛠️</span><span>Developer</span></a>
       }
+      
       <a class="quick-action-btn" [routerLink]="['/configuracoes']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="action-icon">⚙️</span><span>Configurações</span></a>
       <button type="button" class="quick-action-btn" (click)="sair()"><span class="action-icon">🚪</span><span>Sair</span></button>
       <img class="sidebar-gif" [src]="user?.accountType === 'loja' ? '/assets/sidloja.gif' : '/assets/card.gif'" alt="TrustPay animation" loading="lazy" />

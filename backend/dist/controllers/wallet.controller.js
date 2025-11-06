@@ -155,7 +155,7 @@ class WalletController {
                 { $group: { _id: null, total: sumBaseWhenInstallments } }
             ]);
             const enviadosAgg = await Transaction_1.Transaction.aggregate([
-                { $match: { userId: String(userId), status: 'APPROVED' } },
+                { $match: { userId: String(userId), status: 'APPROVED', paymentMethod: 'internal_transfer' } },
                 { $group: { _id: null, total: { $sum: '$amount' } } }
             ]);
             const recebidos = recebidosAgg[0]?.total || 0;

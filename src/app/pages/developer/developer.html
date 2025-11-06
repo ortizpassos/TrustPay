@@ -46,7 +46,11 @@
               <li><strong>GET</strong> <code>/payments/:id/status</code> — status</li>
               <li><strong>POST</strong> <code>/payments/:id/refund</code> — reembolso</li>
             </ul>
-            <div class="alert alert-info">Consulte a documentação completa para detalhes de cada endpoint, parâmetros e exemplos de resposta.</div>
+            <div class="alert alert-info">
+              <a [routerLink]="['/documentacao']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" style="display:block; text-decoration:none; color:inherit;">
+                Consulte a documentação completa para detalhes de cada endpoint, parâmetros e exemplos de resposta.
+              </a>
+            </div>
           </div>
           <!-- Card: Gerar Headers HMAC -->
           <div class="dashboard-card">

@@ -19,9 +19,9 @@ export class PaymentService {
   constructor(private http: HttpClient) {}
 
     // Relatório de transações por período
-    getReport(params: { from: string; to: string }): Observable<{ success: boolean; data?: any[]; error?: { message: string } }> {
+    getReport(params: { from: string; to: string }): Observable<{ success: boolean; data?: { count: number; transactions: any[]; filters: any }; error?: { message: string } }> {
       const qs = `?from=${encodeURIComponent(params.from)}&to=${encodeURIComponent(params.to)}`;
-      return this.http.get<{ success: boolean; data?: any[]; error?: { message: string } }>(`${this.apiUrl}/payments/report${qs}`);
+      return this.http.get<{ success: boolean; data?: { count: number; transactions: any[]; filters: any }; error?: { message: string } }>(`${this.apiUrl}/payments/report${qs}`);
     }
 
   // Iniciar uma transação de pagamento

@@ -10,7 +10,7 @@
 }
 
 /* Layout from Home (TrustPay) */
-.app{display:flex;min-height:100vh;background:var(--bg)}
+.app{display:flex;min-height:100vh;background:var(--bg);align-items:flex-start;}
 /* Fixed sidebar on desktop */
 .sidebar{
   position: fixed;
@@ -84,7 +84,7 @@
 .sidebar-actions .action-icon{font-size:18px}
 
 /* Dashboard specific tweaks (keep original naming) */
-.dashboard-content{padding:2rem}
+.dashboard-content{padding:1rem;overflow-x:auto}
 .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:1.5rem}
 
 .dashboard-card{background:var(--card);border:1px solid #e5e7eb;border-radius:0.5rem;padding:1.5rem;box-shadow:var(--shadow)}

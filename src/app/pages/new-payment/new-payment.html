@@ -8,63 +8,65 @@
       </div>
     </header>
     <section class="content" aria-live="polite">
-      <div class="dashboard-content">
-        <div class="dashboard-grid">
-          <div class="dashboard-card full-width">
-            <div class="new-payment-container">
-              <h1>Novo Pagamento</h1>
-              <form (ngSubmit)="iniciarPagamento()" class="payment-form">
-                <div class="field-group" *ngIf="metodo==='saldo'">
-                  <label>Saldo disponível</label>
-                  <div class="saldo-info">{{ formatarMoeda(saldoDisponivel()) }}</div>
-                </div>
-                <div class="field-group">
-                  <label>E-mail do destinatário</label>
-                  <input type="email" [(ngModel)]="emailDestinatario" name="emailDestinatario" required placeholder="usuario@exemplo.com" />
-                </div>
-                <div class="field-group">
-                  <label>Valor (BRL)</label>
-                  <input type="number" step="0.01" min="0.01" [(ngModel)]="valor" name="valor" required />
-                </div>
-                <div class="field-group">
-                  <label>Método de Pagamento</label>
-                  <select [(ngModel)]="metodo" name="metodo" required (change)="onMetodoChange()">
-                    <option value="credit_card">Cartão de Crédito</option>
-                    <option value="saldo">Transferência Interna</option>
-                  </select>
-                </div>
-                <div *ngIf="metodo==='credit_card'" class="field-group">
-                  <ng-container *ngIf="carregandoCartoes(); else cartoesContent">
-                    <p>Carregando cartões salvos...</p>
-                  </ng-container>
-                  <ng-template #cartoesContent>
-                    <div *ngIf="semCartaoSalvo(); else listaCartoes">
-                      <p>Nenhum cartão cadastrado.</p>
-                      <button type="button" class="btn-primary">Cadastrar novo cartão</button>
-                    </div>
-                    <ng-template #listaCartoes>
-                      <label>Selecione um cartão</label>
-                      <select [(ngModel)]="cartaoSelecionado" name="cartaoSelecionado" required>
-                        <option *ngFor="let c of savedCards" [value]="c.id">{{ c.cardBrand | uppercase }} **** {{ c.lastFourDigits }}</option>
-                      </select>
-                    </ng-template>
-                  </ng-template>
-                  <label>Parcelas</label>
-                  <select [(ngModel)]="parcelas" name="parcelas">
-                    <option *ngFor="let p of opcoesParcelas" [value]="p">{{ p === 1 ? 'À vista (sem juros)' : p + 'x (3% a.m.)' }}</option>
-                  </select>
-                  <div *ngIf="resumoParcelas() as r" class="parcelas-resumo">
-                    <p *ngIf="r.mode==='AVISTA'">Valor final: {{ valorFormatado() }}</p>
-                    <p *ngIf="r.mode==='PARCELADO'">{{ r.quantity }}x de {{ formatarMoeda(r.installmentValue) }} (Total {{ formatarMoeda(r.totalWithInterest) }})</p>
+      <div class="new-payment-wrapper">
+        <div class="dashboard-content">
+          <div class="dashboard-grid">
+            <div class="dashboard-card full-width">
+              <div class="new-payment-container">
+                <h1>Novo Pagamento</h1>
+                <form (ngSubmit)="iniciarPagamento()" class="payment-form">
+                  <div class="field-group" *ngIf="metodo==='saldo'">
+                    <label>Saldo disponível</label>
+                    <div class="saldo-info">{{ formatarMoeda(saldoDisponivel()) }}</div>
                   </div>
-                </div>
-                <div class="acoes">
-                  <button type="submit" class="btn-primary" [disabled]="carregando() || (metodo==='credit_card' && !cartaoSelecionado)">{{ carregando() ? 'Processando...' : 'Iniciar Pagamento' }}</button>
-                  <button type="button" class="btn-secondary" (click)="voltar()" [disabled]="carregando()">Cancelar</button>
-                </div>
-                <div *ngIf="sucesso()" class="alerta-sucesso">{{ sucesso() }}</div>
-                <div *ngIf="erro()" class="erros">{{ erro() }}</div>
-              </form>
+                  <div class="field-group">
+                    <label>E-mail do destinatário</label>
+                    <input type="email" [(ngModel)]="emailDestinatario" name="emailDestinatario" required placeholder="usuario@exemplo.com" />
+                  </div>
+                  <div class="field-group">
+                    <label>Valor (BRL)</label>
+                    <input type="number" step="0.01" min="0.01" [(ngModel)]="valor" name="valor" required />
+                  </div>
+                  <div class="field-group">
+                    <label>Método de Pagamento</label>
+                    <select [(ngModel)]="metodo" name="metodo" required (change)="onMetodoChange()">
+                      <option value="credit_card">Cartão de Crédito</option>
+                      <option value="saldo">Transferência Interna</option>
+                    </select>
+                  </div>
+                  <div *ngIf="metodo==='credit_card'" class="field-group">
+                    <ng-container *ngIf="carregandoCartoes(); else cartoesContent">
+                      <p>Carregando cartões salvos...</p>
+                    </ng-container>
+                    <ng-template #cartoesContent>
+                      <div *ngIf="semCartaoSalvo(); else listaCartoes">
+                        <p>Nenhum cartão cadastrado.</p>
+                        <button type="button" class="btn-primary">Cadastrar novo cartão</button>
+                      </div>
+                      <ng-template #listaCartoes>
+                        <label>Selecione um cartão</label>
+                        <select [(ngModel)]="cartaoSelecionado" name="cartaoSelecionado" required>
+                          <option *ngFor="let c of savedCards" [value]="c.id">{{ c.cardBrand | uppercase }} **** {{ c.lastFourDigits }}</option>
+                        </select>
+                      </ng-template>
+                    </ng-template>
+                    <label>Parcelas</label>
+                    <select [(ngModel)]="parcelas" name="parcelas">
+                      <option *ngFor="let p of opcoesParcelas" [value]="p">{{ p === 1 ? 'À vista (sem juros)' : p + 'x (3% a.m.)' }}</option>
+                    </select>
+                    <div *ngIf="resumoParcelas() as r" class="parcelas-resumo">
+                      <p *ngIf="r.mode==='AVISTA'">Valor final: {{ valorFormatado() }}</p>
+                      <p *ngIf="r.mode==='PARCELADO'">{{ r.quantity }}x de {{ formatarMoeda(r.installmentValue) }} (Total {{ formatarMoeda(r.totalWithInterest) }})</p>
+                    </div>
+                  </div>
+                  <div class="acoes">
+                    <button type="submit" class="btn-primary" [disabled]="carregando() || (metodo==='credit_card' && !cartaoSelecionado)">{{ carregando() ? 'Processando...' : 'Iniciar Pagamento' }}</button>
+                    <button type="button" class="btn-secondary" (click)="voltar()" [disabled]="carregando()">Cancelar</button>
+                  </div>
+                  <div *ngIf="sucesso()" class="alerta-sucesso">{{ sucesso() }}</div>
+                  <div *ngIf="erro()" class="erros">{{ erro() }}</div>
+                </form>
+              </div>
             </div>
           </div>
         </div>

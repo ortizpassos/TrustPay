@@ -1,0 +1,78 @@
+<div class="app">
+  <app-sidebar [user]="null" [sidebarOpen]="false"></app-sidebar>
+  <main class="main">
+    <header class="topbar" role="banner">
+      <button id="menuToggle" class="menu-btn" aria-label="Abrir menu">☰</button>
+    </header>
+    <section class="content" aria-live="polite">
+      <div class="docs">
+        <h1>Documentação da API TrustPay</h1>
+        <p>Guia completo para integração com a API.</p>
+
+        <nav class="toc">
+          <a href="#intro">Introdução</a>
+          <a href="#auth">Autenticação HMAC</a>
+          <a href="#endpoints">Endpoints</a>
+          <a href="#errors">Erros</a>
+          <a href="#env">Variáveis de Ambiente</a>
+          <a href="#examples">Exemplos</a>
+        </nav>
+
+        <section id="intro">
+          <h2>Introdução</h2>
+          <p>TrustPay é uma API de pagamentos para e-commerce, permitindo criar intenções de pagamento, capturar pagamentos com cartão, iniciar PIX, consultar status e realizar reembolsos.</p>
+        </section>
+
+        <section id="auth">
+          <h2>Autenticação HMAC</h2>
+          <ul>
+            <li><code>x-api-key</code>: sua chave pública</li>
+            <li><code>x-timestamp</code>: epoch em segundos</li>
+            <li><code>x-signature</code>: HMAC-SHA256 de METHOD, PATH, TIMESTAMP e RAW_BODY</li>
+          </ul>
+        </section>
+
+        <section id="endpoints">
+          <h2>Endpoints Principais</h2>
+          <h3>Criar Intenção de Pagamento</h3>
+          <pre><code>POST /api/merchant/v1/payment-intents</code></pre>
+          <h3>Capturar Pagamento (Cartão)</h3>
+          <pre><code>POST /api/merchant/v1/payments/{{ '{' }}id{{ '}' }}/capture</code></pre>
+          <h3>Iniciar PIX</h3>
+          <pre><code>POST /api/merchant/v1/payments/{{ '{' }}id{{ '}' }}/pix</code></pre>
+          <h3>Consultar Status</h3>
+          <pre><code>GET /api/merchant/v1/payments/{{ '{' }}id{{ '}' }}/status</code></pre>
+          <h3>Reembolso</h3>
+          <pre><code>POST /api/merchant/v1/payments/{{ '{' }}id{{ '}' }}/refund</code></pre>
+        </section>
+
+        <section id="errors">
+          <h2>Erros Comuns</h2>
+          <ul>
+            <li>INVALID_STATUS</li>
+            <li>EXTERNAL_PAYMENT_NOT_AUTHORIZED</li>
+            <li>TRANSACTION_NOT_FOUND</li>
+          </ul>
+        </section>
+
+        <section id="env">
+          <h2>Variáveis de Ambiente</h2>
+          <ul>
+            <li>EXTERNAL_CARD_API_URL</li>
+            <li>EXTERNAL_CARD_API_KEY</li>
+            <li>TRUSTPAY_MERCHANT_KEYS</li>
+          </ul>
+        </section>
+
+        <section id="examples">
+          <h2>Exemplos</h2>
+    <pre><code>curl -X POST http://localhost:3000/api/merchant/v1/payment-intents \
+  -H "x-api-key: SUA_CHAVE" \
+  -H "x-timestamp: $(date +%s)" \
+  -H "x-signature: ASSINATURA_CALCULADA" \
+  -d '{{ '{' }}"amount": 199.90, "currency":"BRL"{{ '}' }}'</code></pre>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>

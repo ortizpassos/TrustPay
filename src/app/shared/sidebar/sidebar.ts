@@ -12,6 +12,16 @@ export class Sidebar {
   @Input() sidebarOpen: boolean = false;
   @Input() user: any;
 
+  get displayName(): string {
+    const u = this.user || {};
+    if (u.accountType === 'loja') {
+      // For merchants, show only last name if available
+      return (u.lastName || u.email || u.sidebarTitle || 'Menu');
+    }
+    const full = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+    return full || u.email || u.sidebarTitle || 'Menu';
+  }
+
   closeSidebarOnNavigate() {
     this.sidebarOpen = false;
   }

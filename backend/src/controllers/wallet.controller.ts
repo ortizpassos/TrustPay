@@ -137,8 +137,9 @@ class WalletController {
       { $match: recebidosMatch },
       { $group: { _id: null, total: sumBaseWhenInstallments } }
     ]);
+    // Débitos impactam o saldo apenas para transferências internas (saldo)
     const enviadosAgg = await Transaction.aggregate([
-      { $match: { userId: String(userId), status: 'APPROVED' } },
+      { $match: { userId: String(userId), status: 'APPROVED', paymentMethod: 'internal_transfer' } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
     const recebidos = recebidosAgg[0]?.total || 0;

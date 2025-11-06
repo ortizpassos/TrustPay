@@ -1,0 +1,16 @@
+.docs {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 8px 4px 48px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.docs h1 { font-size: 28px; margin: 0 0 12px; }
+.docs h2 { margin-top: 32px; font-size:20px; border-bottom:1px solid #e5e7eb; padding-bottom:4px; }
+.docs h3 { margin-top:18px; font-size:16px; }
+.docs pre { background:#0f172a; color:#f8fafc; padding:10px 14px; border-radius:6px; overflow:auto; font-size:12px; }
+.docs code { font-family: monospace; }
+.toc { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 24px; }
+.toc a { padding:6px 10px; background:#eef2ff; border-radius:6px; font-size:12px; text-decoration:none; color:#1e3a8a; }
+.toc a:hover { background:#e0e7ff; }
+@media (max-width: 900px){ .docs { padding:12px 8px 64px; } }

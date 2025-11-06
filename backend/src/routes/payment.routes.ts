@@ -23,6 +23,9 @@ router.get('/recent', paymentController.recentTransactions);
 router.post('/credit-card', validatePayment(creditCardPaymentSchema), paymentController.processCreditCardPayment);
 router.post('/pix', validatePayment(pixPaymentSchema), paymentController.processPixPayment);
 
+// Relatório (tem que vir antes de /:transactionId para não conflitar)
+router.get('/report', paymentController.getReport);
+
 // Status e gerenciamento de pagamento
 router.get('/pix/:transactionId/status', paymentController.checkPixStatus);
 router.get('/:transactionId', paymentController.getTransaction);

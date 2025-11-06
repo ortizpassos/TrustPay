@@ -77,7 +77,7 @@ class PaymentController {
                     { $group: { _id: null, total: { $sum: '$amount' } } }
                 ]);
                 const enviados = await Transaction_1.Transaction.aggregate([
-                    { $match: { userId: remetente._id.toString(), status: 'APPROVED' } },
+                    { $match: { userId: remetente._id.toString(), status: 'APPROVED', paymentMethod: 'internal_transfer' } },
                     { $group: { _id: null, total: { $sum: '$amount' } } }
                 ]);
                 const saldo = (recebidos[0]?.total || 0) - (enviados[0]?.total || 0);
@@ -486,6 +486,78 @@ class PaymentController {
                     },
                     sort: sortField,
                     direction: sortDir === 1 ? 'asc' : 'desc'
+                }
+            };
+            res.json(response);
+        });
+        this.getReport = (0, errorHandler_1.asyncHandler)(async (req, res) => {
+            const user = req.user;
+            const { from, to, status, paymentMethod, merchantId, flow = 'all', limit = '1000' } = req.query;
+            let startDate = null;
+            let endDate = null;
+            if (from) {
+                const d = new Date(from);
+                if (!isNaN(d.getTime()))
+                    startDate = new Date(d.setHours(0, 0, 0, 0));
+            }
+            if (to) {
+                const d = new Date(to);
+                if (!isNaN(d.getTime()))
+                    endDate = new Date(d.setHours(23, 59, 59, 999));
+            }
+            if (!startDate && !endDate) {
+                endDate = new Date();
+                startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            }
+            const uid = String(user._id);
+            const flowNorm = ['in', 'out', 'all'].includes(String(flow))
+                ? flow
+                : 'all';
+            let query = {};
+            if (merchantId) {
+                if (flowNorm === 'in')
+                    query = { $or: [{ merchantId }, { recipientUserId: uid }] };
+                else if (flowNorm === 'out')
+                    query = { userId: uid };
+                else
+                    query = { $or: [{ merchantId }, { userId: uid }, { recipientUserId: uid }] };
+            }
+            else {
+                if (flowNorm === 'in')
+                    query = { recipientUserId: uid };
+                else if (flowNorm === 'out')
+                    query = { userId: uid };
+                else
+                    query = { $or: [{ userId: uid }, { recipientUserId: uid }] };
+            }
+            if (status)
+                query.status = status;
+            if (paymentMethod)
+                query.paymentMethod = paymentMethod;
+            if (startDate || endDate) {
+                query.createdAt = {};
+                if (startDate)
+                    query.createdAt.$gte = startDate;
+                if (endDate)
+                    query.createdAt.$lte = endDate;
+            }
+            const limitNum = Math.max(1, Math.min(parseInt(String(limit), 10) || 1000, 5000));
+            const transactions = await Transaction_1.Transaction.find(query)
+                .sort({ createdAt: -1 })
+                .limit(limitNum);
+            const response = {
+                success: true,
+                data: {
+                    count: transactions.length,
+                    transactions: transactions.map(t => t.toJSON()),
+                    filters: {
+                        from: startDate?.toISOString() || null,
+                        to: endDate?.toISOString() || null,
+                        status: status || null,
+                        paymentMethod: paymentMethod || null,
+                        flow: flowNorm,
+                        merchantId: merchantId || null
+                    }
                 }
             };
             res.json(response);
