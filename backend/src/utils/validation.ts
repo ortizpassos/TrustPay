@@ -4,10 +4,9 @@ import Joi from 'joi';
 export const registerSchema = Joi.object({
   accountType: Joi.string()
     .valid('loja', 'pessoa_fisica')
-    .required()
+    .default('pessoa_fisica')
     .messages({
-      'any.only': 'Tipo de conta deve ser "loja" ou "pessoa_fisica"',
-      'any.required': 'Tipo de conta é obrigatório'
+      'any.only': 'Tipo de conta deve ser "loja" ou "pessoa_fisica"'
     }),
   email: Joi.string()
     .email()

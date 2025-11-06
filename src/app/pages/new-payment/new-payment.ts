@@ -8,6 +8,7 @@ import { PaymentInitiateRequest, PaymentMethod, Transaction } from '../../models
 import { AuthService } from '../../services/auth.service';
 import { UserService, UserOption } from '../../services/user.service';
 import { Sidebar } from "../../shared/sidebar/sidebar";
+import { WalletService } from '../../services/wallet.service';
 
 @Component({
   selector: 'app-new-payment',
@@ -28,6 +29,7 @@ export class NewPaymentPage {
   carregando = signal(false);
   erro = signal('');
   sucesso = signal('');
+  saldoDisponivel = signal(0);
 
   savedCards: any[] = [];
   carregandoCartoes = signal(false);
@@ -38,13 +40,17 @@ export class NewPaymentPage {
     private router: Router,
     public auth: AuthService,
     private users: UserService,
-    private cards: CardService
+    private cards: CardService,
+    private walletService: WalletService
   ) {}
 
   ngOnInit() {
     if (this.metodo === 'credit_card') {
       this.buscarCartoesSalvos();
     }
+    // Carrega saldo disponível e atualiza ao receber refresh da carteira
+    this.carregarSaldo();
+    this.walletService.refresh$.subscribe(() => this.carregarSaldo());
   }
 
   buscarCartoesSalvos() {
@@ -104,6 +110,17 @@ export class NewPaymentPage {
 
   valorFormatado(): string { return this.formatarMoeda(this.valor); }
 
+  carregarSaldo(): void {
+    this.walletService.getUserBalance().subscribe({
+      next: (resp) => {
+        if (resp.success && resp.data) {
+          this.saldoDisponivel.set(resp.data.saldo);
+        }
+      },
+      error: () => {}
+    });
+  }
+
   iniciarPagamento(): void {
     this.erro.set('');
     this.sucesso.set('');
@@ -119,13 +136,20 @@ export class NewPaymentPage {
       this.erro.set('Selecione um cartão para pagamento.');
       return;
     }
+    if (this.metodo === 'saldo' && this.valor > this.saldoDisponivel()) {
+      this.erro.set('Saldo insuficiente para transferência.');
+      return;
+    }
+
     const currentUser = this.auth.getCurrentUser();
     if (!currentUser) {
       this.router.navigate(['/auth']);
       return;
     }
+
     let req: any;
     if (this.metodo === 'credit_card') {
+      const cartao = this.savedCards.find((c: any) => c.id === this.cartaoSelecionado);
       req = {
         orderId: 'NP-' + Date.now(),
         amount: this.valor,
@@ -140,7 +164,14 @@ export class NewPaymentPage {
         },
         to: {
           email: this.emailDestinatario
-        }
+        },
+        customer: {
+          name: cartao?.cardHolderName || `${currentUser.firstName} ${currentUser.lastName}`.trim(),
+          email: currentUser.email,
+          document: cartao?.cardHolderCpf || undefined
+        },
+        returnUrl: `${location.origin}/payment/success`,
+        callbackUrl: `${location.origin}/payment/callback`
       };
     } else if (this.metodo === 'saldo') {
       req = {
@@ -155,22 +186,65 @@ export class NewPaymentPage {
         },
         to: {
           email: this.emailDestinatario
+        },
+        customer: {
+          name: `${currentUser.firstName} ${currentUser.lastName}`.trim(),
+          email: currentUser.email,
+          document: currentUser.document
         }
       };
     }
+
     this.carregando.set(true);
     this.payment.initiatePayment(req).subscribe({
       next: (resp) => {
-        if (resp.success && resp.data) {
-          this.sucesso.set('Transferência realizada com sucesso!');
-          setTimeout(() => {
-            const transacao = resp.data as Transaction;
-            this.router.navigate(['/payment', transacao.id]);
-          }, 1200);
-        } else {
+        if (!(resp.success && resp.data)) {
           this.erro.set(resp.error?.message || 'Falha ao iniciar pagamento');
+          this.carregando.set(false);
+          return;
         }
-        this.carregando.set(false);
+
+        const transacao = resp.data as Transaction;
+        // Para cartão de crédito, processa a captura com a API externa antes de concluir
+        if (this.metodo === 'credit_card') {
+          const payload: any = {
+            transactionId: transacao.id,
+            savedCardId: this.cartaoSelecionado
+          };
+          this.payment.processCreditCardPayment(payload).subscribe({
+            next: (cap) => {
+              const ok = cap.success === true;
+              const approved = (cap as any)?.data?.transaction?.status === 'APPROVED' || (cap as any)?.data?.status === 'APPROVED';
+              if (ok && approved) {
+                this.sucesso.set('Pagamento autorizado com sucesso!');
+                // Mantém a mensagem por 2 segundos
+                setTimeout(() => this.sucesso.set(''), 2000);
+                // Notifica carteira do destinatário e limpa campos
+                this.walletService.triggerRefresh();
+                this.emailDestinatario = '';
+                this.valor = 0;
+              } else {
+                const msg = (cap as any)?.error?.message || (cap as any)?.data?.message || 'Pagamento recusado';
+                this.erro.set(msg);
+              }
+              this.carregando.set(false);
+            },
+            error: (err) => {
+              this.erro.set(err.error?.error?.message || err.error?.message || 'Erro ao processar cartão');
+              this.carregando.set(false);
+            }
+          });
+        } else {
+          // Saldo: conclui imediatamente, sem redirecionar
+          this.sucesso.set('Transferência realizada com sucesso!');
+          // Mantém a mensagem por 2 segundos
+          setTimeout(() => this.sucesso.set(''), 2000);
+          // Notifica carteira e limpa campos
+          this.walletService.triggerRefresh();
+          this.emailDestinatario = '';
+          this.valor = 0;
+          this.carregando.set(false);
+        }
       },
       error: (err) => {
         this.erro.set(err.error?.error?.message || err.error?.message || 'Erro inesperado');

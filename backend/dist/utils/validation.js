@@ -8,10 +8,9 @@ const joi_1 = __importDefault(require("joi"));
 exports.registerSchema = joi_1.default.object({
     accountType: joi_1.default.string()
         .valid('loja', 'pessoa_fisica')
-        .required()
+        .default('pessoa_fisica')
         .messages({
-        'any.only': 'Tipo de conta deve ser "loja" ou "pessoa_fisica"',
-        'any.required': 'Tipo de conta é obrigatório'
+        'any.only': 'Tipo de conta deve ser "loja" ou "pessoa_fisica"'
     }),
     email: joi_1.default.string()
         .email()

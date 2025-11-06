@@ -7,7 +7,7 @@ export const saveCardSchema = Joi.object({
     .pattern(new RegExp('^\\d{13,19}$'))
     .required(),
   cardHolderName: Joi.string().min(3).max(50).required(),
-  cardHolderCpf: Joi.string().pattern(new RegExp('^\\d{11}$')).required(),
+  cardHolderCpf: Joi.string().pattern(new RegExp('^\\d{11}$')).optional(),
   expirationMonth: Joi.string().pattern(new RegExp('^(0[1-9]|1[0-2])$')).required(),
   expirationYear: Joi.string().pattern(new RegExp('^\\d{4}$')).required(),
   cvv: Joi.string().pattern(new RegExp('^\\d{3,4}$')).required(),

@@ -19,8 +19,8 @@
             <ng-template #resumoCarteira>
               <div class="wallet-summary">
                 <div class="wallet-balance saldo-destaque">
-                  <span class="label">Saldo em Carteira:</span>
-                  <span class="value saldo-valor">{{ saldoCarteira | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</span>
+                  <span class="label">Saldo Disponível:</span>
+                  <span class="value saldo-valor">{{ saldo() | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</span>
                 </div>
                 <div class="wallet-pending pendente-destaque">
                   <span class="label">A Receber (Pendentes):</span>

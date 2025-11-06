@@ -14,6 +14,10 @@
             <div class="new-payment-container">
               <h1>Novo Pagamento</h1>
               <form (ngSubmit)="iniciarPagamento()" class="payment-form">
+                <div class="field-group" *ngIf="metodo==='saldo'">
+                  <label>Saldo disponível</label>
+                  <div class="saldo-info">{{ formatarMoeda(saldoDisponivel()) }}</div>
+                </div>
                 <div class="field-group">
                   <label>E-mail do destinatário</label>
                   <input type="email" [(ngModel)]="emailDestinatario" name="emailDestinatario" required placeholder="usuario@exemplo.com" />
@@ -26,7 +30,7 @@
                   <label>Método de Pagamento</label>
                   <select [(ngModel)]="metodo" name="metodo" required (change)="onMetodoChange()">
                     <option value="credit_card">Cartão de Crédito</option>
-                    <option value="saldo">Saldo em Conta</option>
+                    <option value="saldo">Transferência Interna</option>
                   </select>
                 </div>
                 <div *ngIf="metodo==='credit_card'" class="field-group">

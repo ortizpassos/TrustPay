@@ -9,6 +9,7 @@ import { CardService } from '../../services/card.service';
 import { FormsModule } from '@angular/forms';
 import { SavedCard, SaveCardRequest } from '../../models/user.model';
 import { PaymentService } from '../../services/payment.service';
+import { forkJoin, of } from 'rxjs';
 import { Transaction } from '../../models/transaction.model';
 import { mapExternalCardReason } from '../../shared/utils/external-reason.util';
 
@@ -38,6 +39,30 @@ export class DashboardComponent {
   definindoPadraoId = signal<string | null>(null);
   transacoesRecentes = signal<Transaction[]>([]);
   carregandoTransacoes = signal(false);
+  
+  // Helpers para direção das transações (recebido vs pago)
+  private isIncoming(t: Transaction, u: User | null): boolean {
+    if (!u) return false;
+    const uid = (u as any).id || (u as any)._id || '';
+    const merchantKey = (u as any).merchantKey;
+    return (
+      (t.recipientUserId && t.recipientUserId === uid) ||
+      (!!merchantKey && !!t.merchantId && t.merchantId === merchantKey)
+    );
+  }
+
+  directionLabel(t: Transaction): 'Recebido' | 'Pago' {
+    return this.isIncoming(t, this.usuario()) ? 'Recebido' : 'Pago';
+  }
+
+  amountClass(t: Transaction): string {
+    return this.isIncoming(t, this.usuario()) ? 'amount-in' : 'amount-out';
+  }
+
+  signedAmount(t: Transaction): string {
+    const sign = this.isIncoming(t, this.usuario()) ? '+' : '-';
+    return `${sign} ${this.paymentService.formatCurrency(t.amount, t.currency)}`;
+  }
 
   novoCartao = signal<SaveCardRequest>({
     cardNumber: '',
@@ -200,10 +225,52 @@ export class DashboardComponent {
     this.carregandoTransacoes.set(true);
     const usuario = this.usuario();
     const merchantId = usuario && usuario.merchantKey ? usuario.merchantKey : undefined;
-    this.paymentService.getRecentTransactions(limit, merchantId).subscribe({
+
+    // Se for merchant, buscamos RECEBIDOS (merchantId) e PAGOS (userId) e unimos
+    if (merchantId) {
+      forkJoin({
+        recebidos: this.paymentService.getRecentTransactions(limit, merchantId, 'in'),
+        pagos: this.paymentService.getRecentTransactions(limit, undefined, 'out')
+      }).subscribe({
+        next: ({ recebidos, pagos }) => {
+          const rAll = recebidos.success && recebidos.data?.transactions ? recebidos.data.transactions as Transaction[] : [];
+          const pAll = pagos.success && pagos.data?.transactions ? pagos.data.transactions as Transaction[] : [];
+          // Ordena individualmente por data desc
+          const rSorted = [...rAll].sort((a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime());
+          const pSorted = [...pAll].sort((a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime());
+          // Seleção balanceada: garantir presença de recebidos e pagos quando disponíveis
+          const half = Math.ceil(limit / 2);
+          const rPart = rSorted.slice(0, half);
+          const pPart = pSorted.slice(0, limit - rPart.length);
+          let combined = [...rPart, ...pPart];
+          // Se ainda houver espaço (ex.: poucos recebidos), completa com o restante mais recente de qualquer lista
+          if (combined.length < limit) {
+            const extras = [...rSorted.slice(rPart.length), ...pSorted.slice(pPart.length)]
+              .sort((a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime())
+              .slice(0, limit - combined.length);
+            combined = [...combined, ...extras];
+          }
+          this.transacoesRecentes.set(combined);
+          this.carregandoTransacoes.set(false);
+        },
+        error: () => {
+          this.transacoesRecentes.set([]);
+          this.carregandoTransacoes.set(false);
+        }
+      });
+      return;
+    }
+
+    // Usuário comum: apenas as transações onde ele é o pagador
+    this.paymentService.getRecentTransactions(limit).subscribe({
       next: (resp) => {
         if (resp.success && resp.data?.transactions) {
-          this.transacoesRecentes.set(resp.data.transactions as Transaction[]);
+          const list = (resp.data.transactions as Transaction[]).sort((a, b) => {
+            const ta = new Date(a.createdAt as any).getTime();
+            const tb = new Date(b.createdAt as any).getTime();
+            return tb - ta;
+          });
+          this.transacoesRecentes.set(list);
         } else {
           this.transacoesRecentes.set([]);
         }
@@ -235,9 +302,12 @@ export class DashboardComponent {
   }
 
   descricaoTransacao(t: Transaction): string {
-    if (t.paymentMethod === 'credit_card') return 'Pagamento Cartão';
-    if (t.paymentMethod === 'pix') return 'Pagamento PIX';
-    return 'Transação';
+    // Mostrar apenas o método, sem o prefixo de direção (Recebido/Pago),
+    // pois a direção já é exibida no badge ao lado.
+    const method = t.paymentMethod === 'credit_card' ? 'Cartão'
+      : (t.paymentMethod === 'pix' ? 'PIX'
+      : (t.paymentMethod === 'saldo' || t.paymentMethod === 'internal_transfer' ? 'Transferência Interna' : 'Transação'));
+    return method;
   }
 
   // ===== Ações Rápidas =====

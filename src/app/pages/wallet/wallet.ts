@@ -1,4 +1,4 @@
-import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Router } from '@angular/router';
@@ -7,6 +7,7 @@ import { WalletService } from '../../services/wallet.service';
 import { User } from '../../models/user.model';
 import { Sidebar } from "../../shared/sidebar/sidebar";
 import { WalletReceiptsChartComponent } from './components/wallet-receipts-chart.component';
+import { Subscription, forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-wallet',
@@ -15,10 +16,9 @@ import { WalletReceiptsChartComponent } from './components/wallet-receipts-chart
   styleUrl: './wallet.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WalletPage {
-  get saldoCarteira(): number {
-    return this.totalRecebido();
-  }
+export class WalletPage implements OnDestroy {
+  // Saldo disponível (recebidos aprovados - enviados aprovados)
+  saldo = signal<number>(0);
   // Placeholder de estado inicial para futuras implementações
   carregando = signal(false);
   sidebarOpen = false;
@@ -26,21 +26,31 @@ export class WalletPage {
   totalRecebido = signal<number>(0);
   totalPendente = signal<number>(0);
   usuario: User | null = null;
+  private refreshSub?: Subscription;
 
   constructor(private router: Router, public auth: AuthService, private walletService: WalletService) {
     this.usuario = this.auth.getCurrentUser();
     this.carregarResumoCarteira();
+    // Atualiza automaticamente quando algum evento de refresh for emitido
+    this.refreshSub = this.walletService.refresh$.subscribe(() => this.carregarResumoCarteira());
   }
 
   carregarResumoCarteira(): void {
     const merchantId = this.usuario && this.usuario.merchantKey ? this.usuario.merchantKey : undefined;
-    if (!merchantId) return;
     this.carregando.set(true);
-    this.walletService.getWalletSummary(merchantId).subscribe({
-      next: (resp) => {
-        if (resp.success && resp.data) {
-          this.totalRecebido.set(resp.data.totalRecebido);
-          this.totalPendente.set(resp.data.totalPendente);
+    const balance$ = this.walletService.getUserBalance();
+    const summary$ = merchantId
+      ? this.walletService.getWalletSummary(merchantId)
+      : this.walletService.getUserWalletSummary();
+
+    forkJoin({ balance: balance$, summary: summary$ }).subscribe({
+      next: ({ balance, summary }) => {
+        if (balance.success && balance.data) {
+          this.saldo.set(balance.data.saldo);
+        }
+        if (summary.success && summary.data) {
+          this.totalRecebido.set(summary.data.totalRecebido);
+          this.totalPendente.set(summary.data.totalPendente);
         }
         this.carregando.set(false);
       },
@@ -82,5 +92,9 @@ export class WalletPage {
 
   closeSidebarOnNavigate(): void {
     this.sidebarOpen = false;
+  }
+
+  ngOnDestroy(): void {
+    this.refreshSub?.unsubscribe();
   }
 }

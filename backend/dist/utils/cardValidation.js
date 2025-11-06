@@ -11,7 +11,7 @@ exports.saveCardSchema = joi_1.default.object({
         .pattern(new RegExp('^\\d{13,19}$'))
         .required(),
     cardHolderName: joi_1.default.string().min(3).max(50).required(),
-    cardHolderCpf: joi_1.default.string().pattern(new RegExp('^\\d{11}$')).required(),
+    cardHolderCpf: joi_1.default.string().pattern(new RegExp('^\\d{11}$')).optional(),
     expirationMonth: joi_1.default.string().pattern(new RegExp('^(0[1-9]|1[0-2])$')).required(),
     expirationYear: joi_1.default.string().pattern(new RegExp('^\\d{4}$')).required(),
     cvv: joi_1.default.string().pattern(new RegExp('^\\d{3,4}$')).required(),

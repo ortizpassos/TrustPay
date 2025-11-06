@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { Transaction, ITransaction } from '../models/Transaction';
 import { User, IUser } from '../models/User';
+import { SavedCard } from '../models/SavedCard';
+import { encryptionService } from '../services/encryption.service';
 import { paymentGatewayService } from '../services/paymentGateway.service';
 import { AppError, asyncHandler } from '../middleware/errorHandler';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,14 +22,24 @@ class PaymentController {
     const user = req.user as IUser;
     const limit = Math.min(parseInt((req.query.limit as string) || '5', 10), 20); // hard cap 20
     const merchantId = req.query.merchantId as string | undefined;
+    const flowRaw = String((req.query.flow as string) || 'all').toLowerCase();
+    const flow: 'in' | 'out' | 'all' = (['in','out','all'] as const).includes(flowRaw as any) ? flowRaw as any : 'all';
+    const uid = String(user._id);
     let filter: any = {};
     if (merchantId) {
-      filter.merchantId = merchantId;
+      // Para merchant, in = vendas do merchant OU recebimentos P2P (recipientUserId = usuário);
+      // out = pagamentos efetuados pelo usuário logado; all = união de in e out
+      if (flow === 'in') filter = { $or: [ { merchantId }, { recipientUserId: uid } ] };
+      else if (flow === 'out') filter = { userId: uid };
+      else filter = { $or: [ { merchantId }, { userId: uid }, { recipientUserId: uid } ] };
     } else {
-      filter.userId = user._id;
+      // Para não-merchant, in = recebidos (recipientUserId); out = pagos (userId)
+      if (flow === 'in') filter = { recipientUserId: uid };
+      else if (flow === 'out') filter = { userId: uid };
+      else filter = { $or: [ { userId: uid }, { recipientUserId: uid } ] };
     }
     const transactions = await Transaction.find(filter)
-      .sort({ createdAt: -1 })
+        .sort({ createdAt: -1 })
       .limit(limit)
       .select('orderId amount currency paymentMethod status createdAt updatedAt recipientUserId recipientPixKey installments merchantId');
 
@@ -82,9 +94,13 @@ class PaymentController {
       if (!remetente || !destinatario) {
         throw new AppError('Usuário remetente ou destinatário não encontrado', 404, 'USER_NOT_FOUND');
       }
-      // Calcular saldo do remetente: recebido = recipientUserId, enviado = userId
+      // Calcular saldo do remetente: recebido = recipientUserId OU (merchantId do próprio usuário), enviado = userId
+      const recebidosMatch: any = { status: 'APPROVED', $or: [ { recipientUserId: remetente._id.toString() } ] };
+      if (remetente.merchantKey) {
+        recebidosMatch.$or.push({ merchantId: remetente.merchantKey });
+      }
       const recebidos = await Transaction.aggregate([
-        { $match: { recipientUserId: remetente._id.toString(), status: 'APPROVED' } },
+        { $match: recebidosMatch },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]);
       const enviados = await Transaction.aggregate([
@@ -92,6 +108,15 @@ class PaymentController {
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]);
       const saldo = (recebidos[0]?.total || 0) - (enviados[0]?.total || 0);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[SALDO][CHECK]', {
+          user: remetente.email,
+          recebidos: recebidos[0]?.total || 0,
+          enviados: enviados[0]?.total || 0,
+          saldo,
+          merchantKey: remetente.merchantKey || null
+        });
+      }
       if (saldo < amount) {
         throw new AppError('Saldo insuficiente para transferência', 400, 'INSUFFICIENT_FUNDS');
       }
@@ -162,11 +187,20 @@ class PaymentController {
       throw new AppError('Installments only supported for credit card', 400, 'INSTALLMENTS_NOT_ALLOWED');
     }
 
+    // Opcional: identificar destinatário por e-mail para fluxos P2P com cartão
+    let resolvedRecipientUserId: string | undefined = undefined;
+    if (paymentMethod === 'credit_card' && to?.email) {
+      const dest = await User.findOne({ email: String(to.email).toLowerCase() });
+      if (dest) {
+        resolvedRecipientUserId = dest._id;
+      }
+    }
+
     // Cria nova transação com campos estendidos
     const transaction = new Transaction({
       orderId,
       userId: user._id,
-      recipientUserId: recipientUserId || undefined,
+      recipientUserId: recipientUserId || resolvedRecipientUserId || undefined,
       recipientPixKey: recipientPixKey || undefined,
       amount: finalAmount,
       baseAmount: paymentMethod === 'credit_card' ? amount : undefined,
@@ -176,7 +210,8 @@ class PaymentController {
       customer,
       returnUrl,
       callbackUrl,
-      installments: installmentsData
+      installments: installmentsData,
+      savedCardId: cardId || undefined
     });
 
     await transaction.save();
@@ -191,7 +226,7 @@ class PaymentController {
 
   // Processar pagamento com cartão de crédito
   processCreditCardPayment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { transactionId, cardNumber, cardHolderName, expirationMonth, expirationYear, cvv, saveCard } = req.body;
+  const { transactionId, savedCardId, cardNumber: rawCardNumber, cardHolderName: rawHolder, expirationMonth: rawExpM, expirationYear: rawExpY, cvv: rawCvv, saveCard } = req.body;
     const user = req.user as IUser;
 
   // Busca transação
@@ -201,8 +236,9 @@ class PaymentController {
       throw new AppError('Transaction not found', 404, 'TRANSACTION_NOT_FOUND');
     }
 
-  // Verifica se transação pertence ao usuário (ou é guest permitida)
-    if (transaction.userId && transaction.userId !== user._id) {
+  // Verifica se transação pertence ao usuário (pagador)
+    const isOwner = transaction.userId && String(transaction.userId) === String(user._id);
+    if (!isOwner) {
       throw new AppError('Unauthorized access to transaction', 403, 'UNAUTHORIZED_TRANSACTION');
     }
 
@@ -219,57 +255,138 @@ class PaymentController {
       transaction.status = 'PROCESSING';
       await transaction.save();
 
-      // Processa pagamento no gateway
-      const amountToCharge = transaction.amount; // Já inclui juros se parcelado
-      const gatewayResponse = await paymentGatewayService.processCreditCard({
-        cardNumber,
-        cardHolderName,
-        expirationMonth,
-        expirationYear,
-        cvv
-      }, amountToCharge);
+      // Resolver dados do cartão: usar savedCardId se informado; caso contrário, usar dados brutos do body
+      let cardNumber = rawCardNumber;
+      let cardHolderName = rawHolder;
+      let expirationMonth = rawExpM;
+      let expirationYear = rawExpY;
+      let cvv = rawCvv;
 
-  // Atualiza transação com resposta do gateway
-      transaction.status = gatewayResponse.status as any;
-      transaction.bankTransactionId = gatewayResponse.gatewayTransactionId;
-      transaction.gatewayResponse = gatewayResponse.details;
-
-      await transaction.save();
-
-  // TODO: Se saveCard = true e aprovado, salvar cartão tokenizado (integração futura)
-      if (saveCard && gatewayResponse.success && user) {
-        // This will be implemented in the cards API
-        console.log('Card saving requested - will be implemented in cards API');
+      let effectiveSavedCardId: string | undefined = savedCardId || (transaction as any).savedCardId;
+      if (effectiveSavedCardId && !cardNumber) {
+        const saved = await SavedCard.findOne({ _id: effectiveSavedCardId, userId: user._id });
+        if (!saved) {
+          throw new AppError('Cartão salvo não encontrado', 404, 'SAVED_CARD_NOT_FOUND');
+        }
+        try {
+          const data = encryptionService.detokenizeCard((saved as any).encryptedData);
+          cardNumber = data.cardNumber;
+          cardHolderName = data.cardHolderName;
+          expirationMonth = data.expirationMonth;
+          expirationYear = data.expirationYear;
+        } catch (e) {
+          throw new AppError('Falha ao recuperar dados do cartão', 500, 'CARD_DECRYPT_ERROR');
+        }
+        // CVV nunca é armazenado; deve ser fornecido quando necessário. Se a API externa não exigir, segue sem.
       }
 
-  // TODO: Enviar callback para o merchant
-      // await this.sendCallbackNotification(transaction);
+      // Integração com API externa de compra para pagamentos entre usuários com cartão
+      const axios = require('axios');
+      const merchantEnvUrl = process.env.EXTERNAL_PURCHASE_API_URL;
+      if (!merchantEnvUrl) {
+        throw new AppError('External purchase API URL not configured', 500, 'MISSING_EXTERNAL_API_URL');
+      }
 
+      // Definir merchantName: usar nome do destinatário (se houver) ou do pagador
+      let merchantName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'TrustPay P2P';
+      if (transaction.recipientUserId) {
+        try {
+          const dest = await User.findById(transaction.recipientUserId);
+          if (dest) {
+            merchantName = `${dest.firstName || ''} ${dest.lastName || ''}`.trim() || merchantName;
+          }
+        } catch (_) {
+          // fallback mantém merchantName atual
+        }
+      }
+
+      const externalPayload = {
+        typePayment: 'CREDIT',
+        amount: transaction.amount,
+        currency: transaction.currency,
+        merchantName,
+  cardNumber,
+        installmentsTotal: transaction.installments?.quantity || 1,
+        mcc: '5732',
+        category: 'ELETRONICOS',
+        createdAt: transaction.createdAt.toISOString()
+      };
+
+      // Log leve (evitar dados sensíveis)
+      if (process.env.EXTERNAL_CARD_API_DEBUG === 'true') {
+        const safeLog = { ...externalPayload, cardNumber: `****${String(cardNumber).slice(-4)}` };
+        console.log('[P2P][CARD][EXTERNAL_PURCHASE_PAYLOAD]', safeLog);
+      }
+
+      let externalResp;
+      try {
+        externalResp = await axios.post(merchantEnvUrl, externalPayload, { headers: {} });
+      } catch (e) {
+        // Tratar recusas/erros da API externa com os mesmos padrões do fluxo merchant
+        const err = e as any;
+        const status = err?.response?.status;
+        if (err.response && [400, 422, 500].includes(status)) {
+          transaction.status = 'DECLINED' as any;
+          transaction.gatewayResponse = err.response.data;
+          await transaction.save();
+          res.status(status).json(err.response.data);
+          return;
+        }
+        // Demais erros: falha de comunicação com a API externa
+        transaction.status = 'FAILED' as any;
+        transaction.gatewayResponse = { error: 'EXTERNAL_API_ERROR' } as any;
+        await transaction.save();
+        res.status(502).json({ success: false, error: { message: 'Erro ao processar pagamento externo', code: 'EXTERNAL_API_ERROR' } });
+        return;
+      }
+
+      if (!externalResp) {
+        // segurança: se não houve resposta, retorna erro genérico
+        transaction.status = 'FAILED' as any;
+        transaction.gatewayResponse = { error: 'NO_EXTERNAL_RESPONSE' } as any;
+        await transaction.save();
+        res.status(502).json({ success: false, error: { message: 'Sem resposta da API externa', code: 'NO_EXTERNAL_RESPONSE' } });
+        return;
+      }
+
+      const extData = externalResp.data;
+      // Atualiza status local conforme retorno externo
+      if (extData?.status === 'AUTHORIZED') {
+        transaction.status = 'APPROVED' as any;
+      } else {
+        transaction.status = 'DECLINED' as any;
+      }
+      transaction.bankTransactionId = extData?.transactionId;
+      transaction.gatewayResponse = extData;
+      await transaction.save();
+
+      // Opcional: salvar cartão se solicitado e autorizado
+      if (saveCard && transaction.status === 'APPROVED') {
+        console.log('[P2P][CARD] Solicitação para salvar cartão (a ser implementado)');
+      }
+
+      // Resposta no padrão atual da API de usuário
       const response: PaymentResponse = {
-        success: gatewayResponse.success,
+        success: extData?.status === 'AUTHORIZED',
         data: {
           transaction: transaction.toJSON(),
-          status: gatewayResponse.status,
-          message: gatewayResponse.message,
-          authCode: gatewayResponse.details?.authCode
+          status: transaction.status,
+          message: extData?.message || (transaction.status === 'APPROVED' ? 'Pagamento autorizado' : 'Pagamento recusado'),
+          external: extData
         }
       };
 
-      if (!gatewayResponse.success) {
-        response.error = {
-          message: gatewayResponse.message,
-          code: 'PAYMENT_DECLINED'
-        };
+      if (transaction.status !== 'APPROVED') {
+        response.error = { message: 'Pagamento recusado pela operadora', code: 'PAYMENT_DECLINED' };
       }
 
-      res.json(response);
+      res.status(externalResp.status || 200).json(response);
 
     } catch (error) {
-  // Atualiza status para FAILED em caso de erro
+      // Falha inesperada na orquestração
       transaction.status = 'FAILED';
       transaction.gatewayResponse = { error: (error as Error).message };
       await transaction.save();
-
       throw new AppError('Payment processing failed', 500, 'PAYMENT_PROCESSING_ERROR');
     }
   });
@@ -286,8 +403,10 @@ class PaymentController {
       throw new AppError('Transaction not found', 404, 'TRANSACTION_NOT_FOUND');
     }
 
-  // Verifica se transação pertence ao usuário
-    if (transaction.userId && transaction.userId !== user._id) {
+  // Verifica se transação pertence ao usuário (autor) ou se usuário é o destinatário
+    const isOwner = transaction.userId && String(transaction.userId) === String(user._id);
+    const isRecipient = transaction.recipientUserId && String(transaction.recipientUserId) === String(user._id);
+    if (!isOwner && !isRecipient) {
       throw new AppError('Unauthorized access to transaction', 403, 'UNAUTHORIZED_TRANSACTION');
     }
 
@@ -412,8 +531,10 @@ class PaymentController {
       throw new AppError('Transaction not found', 404, 'TRANSACTION_NOT_FOUND');
     }
 
-  // Verifica se transação pertence ao usuário
-    if (transaction.userId && transaction.userId !== user._id) {
+  // Verifica se transação pertence ao usuário (pagador) ou se usuário é o destinatário
+    const isOwner = transaction.userId && String(transaction.userId) === String(user._id);
+    const isRecipient = transaction.recipientUserId && String(transaction.recipientUserId) === String(user._id);
+    if (!isOwner && !isRecipient) {
       throw new AppError('Unauthorized access to transaction', 403, 'UNAUTHORIZED_TRANSACTION');
     }
 
@@ -437,12 +558,19 @@ class PaymentController {
     const skip = (pageNumber - 1) * limitNumber;
 
   // Monta filtros dinâmicos
-    let query: any = {};
     const merchantId = req.query.merchantId as string | undefined;
+    const flowRaw = String((req.query.flow as string) || 'all').toLowerCase();
+    const flow: 'in' | 'out' | 'all' = (['in','out','all'] as const).includes(flowRaw as any) ? flowRaw as any : 'all';
+    const uid = String(user._id);
+    let query: any;
     if (merchantId) {
-      query.merchantId = merchantId;
+      if (flow === 'in') query = { $or: [ { merchantId }, { recipientUserId: uid } ] };
+      else if (flow === 'out') query = { userId: uid };
+      else query = { $or: [ { merchantId }, { userId: uid }, { recipientUserId: uid } ] };
     } else {
-      query.userId = user._id;
+      if (flow === 'in') query = { recipientUserId: uid };
+      else if (flow === 'out') query = { userId: uid };
+      else query = { $or: [ { userId: uid }, { recipientUserId: uid } ] };
     }
     
     if (status) {

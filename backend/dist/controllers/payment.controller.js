@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.paymentController = void 0;
 const Transaction_1 = require("../models/Transaction");
 const User_1 = require("../models/User");
+const SavedCard_1 = require("../models/SavedCard");
+const encryption_service_1 = require("../services/encryption.service");
 const paymentGateway_service_1 = require("../services/paymentGateway.service");
 const errorHandler_1 = require("../middleware/errorHandler");
 class PaymentController {
@@ -11,12 +13,25 @@ class PaymentController {
             const user = req.user;
             const limit = Math.min(parseInt(req.query.limit || '5', 10), 20);
             const merchantId = req.query.merchantId;
+            const flowRaw = String(req.query.flow || 'all').toLowerCase();
+            const flow = ['in', 'out', 'all'].includes(flowRaw) ? flowRaw : 'all';
+            const uid = String(user._id);
             let filter = {};
             if (merchantId) {
-                filter.merchantId = merchantId;
+                if (flow === 'in')
+                    filter = { $or: [{ merchantId }, { recipientUserId: uid }] };
+                else if (flow === 'out')
+                    filter = { userId: uid };
+                else
+                    filter = { $or: [{ merchantId }, { userId: uid }, { recipientUserId: uid }] };
             }
             else {
-                filter.userId = user._id;
+                if (flow === 'in')
+                    filter = { recipientUserId: uid };
+                else if (flow === 'out')
+                    filter = { userId: uid };
+                else
+                    filter = { $or: [{ userId: uid }, { recipientUserId: uid }] };
             }
             const transactions = await Transaction_1.Transaction.find(filter)
                 .sort({ createdAt: -1 })
@@ -53,8 +68,12 @@ class PaymentController {
                 if (!remetente || !destinatario) {
                     throw new errorHandler_1.AppError('Usuário remetente ou destinatário não encontrado', 404, 'USER_NOT_FOUND');
                 }
+                const recebidosMatch = { status: 'APPROVED', $or: [{ recipientUserId: remetente._id.toString() }] };
+                if (remetente.merchantKey) {
+                    recebidosMatch.$or.push({ merchantId: remetente.merchantKey });
+                }
                 const recebidos = await Transaction_1.Transaction.aggregate([
-                    { $match: { recipientUserId: remetente._id.toString(), status: 'APPROVED' } },
+                    { $match: recebidosMatch },
                     { $group: { _id: null, total: { $sum: '$amount' } } }
                 ]);
                 const enviados = await Transaction_1.Transaction.aggregate([
@@ -62,6 +81,15 @@ class PaymentController {
                     { $group: { _id: null, total: { $sum: '$amount' } } }
                 ]);
                 const saldo = (recebidos[0]?.total || 0) - (enviados[0]?.total || 0);
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log('[SALDO][CHECK]', {
+                        user: remetente.email,
+                        recebidos: recebidos[0]?.total || 0,
+                        enviados: enviados[0]?.total || 0,
+                        saldo,
+                        merchantKey: remetente.merchantKey || null
+                    });
+                }
                 if (saldo < amount) {
                     throw new errorHandler_1.AppError('Saldo insuficiente para transferência', 400, 'INSUFFICIENT_FUNDS');
                 }
@@ -128,10 +156,17 @@ class PaymentController {
             else if (installments?.quantity) {
                 throw new errorHandler_1.AppError('Installments only supported for credit card', 400, 'INSTALLMENTS_NOT_ALLOWED');
             }
+            let resolvedRecipientUserId = undefined;
+            if (paymentMethod === 'credit_card' && to?.email) {
+                const dest = await User_1.User.findOne({ email: String(to.email).toLowerCase() });
+                if (dest) {
+                    resolvedRecipientUserId = dest._id;
+                }
+            }
             const transaction = new Transaction_1.Transaction({
                 orderId,
                 userId: user._id,
-                recipientUserId: recipientUserId || undefined,
+                recipientUserId: recipientUserId || resolvedRecipientUserId || undefined,
                 recipientPixKey: recipientPixKey || undefined,
                 amount: finalAmount,
                 baseAmount: paymentMethod === 'credit_card' ? amount : undefined,
@@ -141,7 +176,8 @@ class PaymentController {
                 customer,
                 returnUrl,
                 callbackUrl,
-                installments: installmentsData
+                installments: installmentsData,
+                savedCardId: cardId || undefined
             });
             await transaction.save();
             const response = {
@@ -151,13 +187,14 @@ class PaymentController {
             res.status(201).json(response);
         });
         this.processCreditCardPayment = (0, errorHandler_1.asyncHandler)(async (req, res) => {
-            const { transactionId, cardNumber, cardHolderName, expirationMonth, expirationYear, cvv, saveCard } = req.body;
+            const { transactionId, savedCardId, cardNumber: rawCardNumber, cardHolderName: rawHolder, expirationMonth: rawExpM, expirationYear: rawExpY, cvv: rawCvv, saveCard } = req.body;
             const user = req.user;
             const transaction = await Transaction_1.Transaction.findById(transactionId);
             if (!transaction) {
                 throw new errorHandler_1.AppError('Transaction not found', 404, 'TRANSACTION_NOT_FOUND');
             }
-            if (transaction.userId && transaction.userId !== user._id) {
+            const isOwner = transaction.userId && String(transaction.userId) === String(user._id);
+            if (!isOwner) {
                 throw new errorHandler_1.AppError('Unauthorized access to transaction', 403, 'UNAUTHORIZED_TRANSACTION');
             }
             if (transaction.status !== 'PENDING') {
@@ -169,37 +206,112 @@ class PaymentController {
             try {
                 transaction.status = 'PROCESSING';
                 await transaction.save();
-                const amountToCharge = transaction.amount;
-                const gatewayResponse = await paymentGateway_service_1.paymentGatewayService.processCreditCard({
+                let cardNumber = rawCardNumber;
+                let cardHolderName = rawHolder;
+                let expirationMonth = rawExpM;
+                let expirationYear = rawExpY;
+                let cvv = rawCvv;
+                let effectiveSavedCardId = savedCardId || transaction.savedCardId;
+                if (effectiveSavedCardId && !cardNumber) {
+                    const saved = await SavedCard_1.SavedCard.findOne({ _id: effectiveSavedCardId, userId: user._id });
+                    if (!saved) {
+                        throw new errorHandler_1.AppError('Cartão salvo não encontrado', 404, 'SAVED_CARD_NOT_FOUND');
+                    }
+                    try {
+                        const data = encryption_service_1.encryptionService.detokenizeCard(saved.encryptedData);
+                        cardNumber = data.cardNumber;
+                        cardHolderName = data.cardHolderName;
+                        expirationMonth = data.expirationMonth;
+                        expirationYear = data.expirationYear;
+                    }
+                    catch (e) {
+                        throw new errorHandler_1.AppError('Falha ao recuperar dados do cartão', 500, 'CARD_DECRYPT_ERROR');
+                    }
+                }
+                const axios = require('axios');
+                const merchantEnvUrl = process.env.EXTERNAL_PURCHASE_API_URL;
+                if (!merchantEnvUrl) {
+                    throw new errorHandler_1.AppError('External purchase API URL not configured', 500, 'MISSING_EXTERNAL_API_URL');
+                }
+                let merchantName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'TrustPay P2P';
+                if (transaction.recipientUserId) {
+                    try {
+                        const dest = await User_1.User.findById(transaction.recipientUserId);
+                        if (dest) {
+                            merchantName = `${dest.firstName || ''} ${dest.lastName || ''}`.trim() || merchantName;
+                        }
+                    }
+                    catch (_) {
+                    }
+                }
+                const externalPayload = {
+                    typePayment: 'CREDIT',
+                    amount: transaction.amount,
+                    currency: transaction.currency,
+                    merchantName,
                     cardNumber,
-                    cardHolderName,
-                    expirationMonth,
-                    expirationYear,
-                    cvv
-                }, amountToCharge);
-                transaction.status = gatewayResponse.status;
-                transaction.bankTransactionId = gatewayResponse.gatewayTransactionId;
-                transaction.gatewayResponse = gatewayResponse.details;
+                    installmentsTotal: transaction.installments?.quantity || 1,
+                    mcc: '5732',
+                    category: 'ELETRONICOS',
+                    createdAt: transaction.createdAt.toISOString()
+                };
+                if (process.env.EXTERNAL_CARD_API_DEBUG === 'true') {
+                    const safeLog = { ...externalPayload, cardNumber: `****${String(cardNumber).slice(-4)}` };
+                    console.log('[P2P][CARD][EXTERNAL_PURCHASE_PAYLOAD]', safeLog);
+                }
+                let externalResp;
+                try {
+                    externalResp = await axios.post(merchantEnvUrl, externalPayload, { headers: {} });
+                }
+                catch (e) {
+                    const err = e;
+                    const status = err?.response?.status;
+                    if (err.response && [400, 422, 500].includes(status)) {
+                        transaction.status = 'DECLINED';
+                        transaction.gatewayResponse = err.response.data;
+                        await transaction.save();
+                        res.status(status).json(err.response.data);
+                        return;
+                    }
+                    transaction.status = 'FAILED';
+                    transaction.gatewayResponse = { error: 'EXTERNAL_API_ERROR' };
+                    await transaction.save();
+                    res.status(502).json({ success: false, error: { message: 'Erro ao processar pagamento externo', code: 'EXTERNAL_API_ERROR' } });
+                    return;
+                }
+                if (!externalResp) {
+                    transaction.status = 'FAILED';
+                    transaction.gatewayResponse = { error: 'NO_EXTERNAL_RESPONSE' };
+                    await transaction.save();
+                    res.status(502).json({ success: false, error: { message: 'Sem resposta da API externa', code: 'NO_EXTERNAL_RESPONSE' } });
+                    return;
+                }
+                const extData = externalResp.data;
+                if (extData?.status === 'AUTHORIZED') {
+                    transaction.status = 'APPROVED';
+                }
+                else {
+                    transaction.status = 'DECLINED';
+                }
+                transaction.bankTransactionId = extData?.transactionId;
+                transaction.gatewayResponse = extData;
                 await transaction.save();
-                if (saveCard && gatewayResponse.success && user) {
-                    console.log('Card saving requested - will be implemented in cards API');
+                if (saveCard && transaction.status === 'APPROVED') {
+                    console.log('[P2P][CARD] Solicitação para salvar cartão (a ser implementado)');
                 }
                 const response = {
-                    success: gatewayResponse.success,
+                    success: extData?.status === 'AUTHORIZED',
                     data: {
                         transaction: transaction.toJSON(),
-                        status: gatewayResponse.status,
-                        message: gatewayResponse.message,
-                        authCode: gatewayResponse.details?.authCode
+                        status: transaction.status,
+                        message: extData?.message || (transaction.status === 'APPROVED' ? 'Pagamento autorizado' : 'Pagamento recusado'),
+                        external: extData
                     }
                 };
-                if (!gatewayResponse.success) {
-                    response.error = {
-                        message: gatewayResponse.message,
-                        code: 'PAYMENT_DECLINED'
-                    };
+                if (transaction.status !== 'APPROVED') {
+                    response.error = { message: 'Pagamento recusado pela operadora', code: 'PAYMENT_DECLINED' };
                 }
-                res.json(response);
+                res.status(externalResp.status || 200).json(response);
             }
             catch (error) {
                 transaction.status = 'FAILED';
@@ -215,7 +327,9 @@ class PaymentController {
             if (!transaction) {
                 throw new errorHandler_1.AppError('Transaction not found', 404, 'TRANSACTION_NOT_FOUND');
             }
-            if (transaction.userId && transaction.userId !== user._id) {
+            const isOwner = transaction.userId && String(transaction.userId) === String(user._id);
+            const isRecipient = transaction.recipientUserId && String(transaction.recipientUserId) === String(user._id);
+            if (!isOwner && !isRecipient) {
                 throw new errorHandler_1.AppError('Unauthorized access to transaction', 403, 'UNAUTHORIZED_TRANSACTION');
             }
             if (transaction.status !== 'PENDING') {
@@ -304,7 +418,9 @@ class PaymentController {
             if (!transaction) {
                 throw new errorHandler_1.AppError('Transaction not found', 404, 'TRANSACTION_NOT_FOUND');
             }
-            if (transaction.userId && transaction.userId !== user._id) {
+            const isOwner = transaction.userId && String(transaction.userId) === String(user._id);
+            const isRecipient = transaction.recipientUserId && String(transaction.recipientUserId) === String(user._id);
+            if (!isOwner && !isRecipient) {
                 throw new errorHandler_1.AppError('Unauthorized access to transaction', 403, 'UNAUTHORIZED_TRANSACTION');
             }
             const response = {
@@ -321,13 +437,26 @@ class PaymentController {
             const pageNumber = parseInt(page);
             const limitNumber = parseInt(limit);
             const skip = (pageNumber - 1) * limitNumber;
-            let query = {};
             const merchantId = req.query.merchantId;
+            const flowRaw = String(req.query.flow || 'all').toLowerCase();
+            const flow = ['in', 'out', 'all'].includes(flowRaw) ? flowRaw : 'all';
+            const uid = String(user._id);
+            let query;
             if (merchantId) {
-                query.merchantId = merchantId;
+                if (flow === 'in')
+                    query = { $or: [{ merchantId }, { recipientUserId: uid }] };
+                else if (flow === 'out')
+                    query = { userId: uid };
+                else
+                    query = { $or: [{ merchantId }, { userId: uid }, { recipientUserId: uid }] };
             }
             else {
-                query.userId = user._id;
+                if (flow === 'in')
+                    query = { recipientUserId: uid };
+                else if (flow === 'out')
+                    query = { userId: uid };
+                else
+                    query = { $or: [{ userId: uid }, { recipientUserId: uid }] };
             }
             if (status) {
                 query.status = status;

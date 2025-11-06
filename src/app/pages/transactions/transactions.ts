@@ -19,6 +19,7 @@ export class TransactionsPage {
   pagination = signal({ page: 1, pages: 1, limit: 10, total: 0 });
   filtroStatus = '';
   filtroMetodo = '';
+  filtroDirecao: '' | 'in' | 'out' = '';
   sortField: string = 'createdAt';
   sortDirection: 'asc' | 'desc' = 'desc';
   usuario: User | null = null;
@@ -46,7 +47,8 @@ export class TransactionsPage {
       status: this.filtroStatus || undefined,
       paymentMethod: this.filtroMetodo || undefined,
       sort: this.sortField,
-      direction: this.sortDirection
+      direction: this.sortDirection,
+      flow: this.filtroDirecao || undefined
     };
     if (merchantId) params.merchantId = merchantId;
     this.paymentService.getTransactionHistory(params).subscribe({
@@ -148,6 +150,65 @@ export class TransactionsPage {
       });
   }
 
+  exportarPdf(): void {
+    // Lazy import to keep bundle smaller
+    Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable')
+    ]).then(([jspdf]) => {
+      const { jsPDF } = (jspdf as any);
+      const doc = new jsPDF();
+      const title = 'Transações';
+      doc.setFontSize(14);
+      doc.text(title, 14, 14);
+
+      const limit = 1000;
+      this.paymentService.getTransactionHistory({
+        page: 1,
+        limit,
+        status: this.filtroStatus || undefined,
+        paymentMethod: this.filtroMetodo || undefined,
+        sort: this.sortField,
+        direction: this.sortDirection,
+        flow: this.filtroDirecao || undefined
+      }).subscribe({
+        next: (resp) => {
+          if (!resp.success || !resp.data?.transactions) return;
+          const rows = resp.data.transactions as Transaction[];
+          const body = rows.map(t => {
+            const jurosValor = this.jurosValor(t);
+            const jurosPct = this.jurosPercent(t);
+            const parcelas = this.parcelasResumo(t) || '-';
+            return [
+              new Date(t.createdAt as any).toLocaleString('pt-BR'),
+              t.orderId,
+              this.directionLabel(t),
+              this.metodoLabel(t.paymentMethod),
+              this.statusLabel(t.status),
+              this.paymentService.formatCurrency(t.amount, t.currency),
+              t.baseAmount ? this.paymentService.formatCurrency(t.baseAmount, t.currency) : '-',
+              jurosValor ? this.paymentService.formatCurrency(jurosValor, t.currency) + (jurosPct ? ` (${jurosPct})` : '') : '-',
+              parcelas
+            ];
+          });
+
+          // @ts-ignore - autoTable is added by the plugin import
+          (doc as any).autoTable({
+            startY: 20,
+            head: [[
+              'Data', 'Order', 'Direção', 'Método', 'Status', 'Valor', 'Base', 'Juros', 'Parcelas'
+            ]],
+            body,
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [33, 150, 243] }
+          });
+
+          doc.save(`transacoes_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+      });
+    });
+  }
+
   aplicarFiltros(): void {
     this.mudarPagina(1);
   }
@@ -160,6 +221,7 @@ export class TransactionsPage {
   metodoLabel(method: string): string {
     if (method === 'credit_card') return 'Cartão';
     if (method === 'pix') return 'PIX';
+    if (method === 'internal_transfer' || method === 'saldo') return 'Transferência Interna';
     return method;
   }
 
@@ -179,6 +241,30 @@ export class TransactionsPage {
     if (status === 'APPROVED') return 'success';
     if (status === 'PENDING' || status === 'PROCESSING') return 'pending';
     return 'error';
+  }
+
+  private isIncoming(t: Transaction): boolean {
+    const u = this.usuario;
+    if (!u) return false;
+    const uid = (u as any).id || (u as any)._id || '';
+    const merchantKey = (u as any).merchantKey;
+    return (
+      (t.recipientUserId && t.recipientUserId === uid) ||
+      (!!merchantKey && !!t.merchantId && t.merchantId === merchantKey)
+    );
+  }
+
+  directionLabel(t: Transaction): 'Recebido' | 'Pago' {
+    return this.isIncoming(t) ? 'Recebido' : 'Pago';
+  }
+
+  amountClass(t: Transaction): string {
+    return this.isIncoming(t) ? 'amount-in' : 'amount-out';
+  }
+
+  signedAmount(t: Transaction): string {
+    const sign = this.isIncoming(t) ? '+' : '-';
+    return `${sign} ${this.paymentService.formatCurrency(t.amount, t.currency)}`;
   }
 
   verDetalhe(t: Transaction): void {

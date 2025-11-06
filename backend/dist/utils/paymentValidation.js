@@ -41,6 +41,11 @@ exports.initiatePaymentSchema = joi_1.default.object({
         'any.only': 'Método de pagamento deve ser credit_card, pix, internal_transfer ou saldo',
         'any.required': 'Método de pagamento é obrigatório'
     }),
+    cardId: joi_1.default.alternatives().conditional('paymentMethod', {
+        is: joi_1.default.valid('credit_card'),
+        then: joi_1.default.string().optional(),
+        otherwise: joi_1.default.any().strip()
+    }),
     from: joi_1.default.object({
         email: joi_1.default.string().email().required(),
         name: joi_1.default.string().min(2).max(100).optional(),
@@ -54,7 +59,7 @@ exports.initiatePaymentSchema = joi_1.default.object({
         then: joi_1.default.object({
             name: joi_1.default.string().trim().min(2).max(100).optional(),
             email: joi_1.default.string().email().lowercase().trim().optional(),
-            document: joi_1.default.string().pattern(new RegExp('^\\d{11}$')).optional()
+            document: joi_1.default.string().pattern(new RegExp('^(?:\\d{11}|\\d{14})$')).optional()
         }).optional(),
         otherwise: joi_1.default.object({
             name: joi_1.default.string().trim().min(2).max(100).required().messages({
@@ -86,14 +91,21 @@ exports.initiatePaymentSchema = joi_1.default.object({
             'string.uri': 'Callback URL deve ser uma URL válida',
             'any.required': 'Callback URL é obrigatória'
         })
+    }),
+    installments: joi_1.default.alternatives().conditional('paymentMethod', {
+        is: joi_1.default.valid('credit_card'),
+        then: joi_1.default.object({
+            quantity: joi_1.default.number().integer().min(1).max(24).optional()
+        }).optional(),
+        otherwise: joi_1.default.any().strip()
     })
 });
-exports.creditCardPaymentSchema = joi_1.default.object({
-    transactionId: joi_1.default.string()
-        .required()
-        .messages({
-        'any.required': 'Transaction ID é obrigatório'
-    }),
+exports.creditCardPaymentSchema = joi_1.default.alternatives().try(joi_1.default.object({
+    transactionId: joi_1.default.string().required(),
+    savedCardId: joi_1.default.string().required(),
+    saveCard: joi_1.default.boolean().default(false)
+}), joi_1.default.object({
+    transactionId: joi_1.default.string().required(),
     cardNumber: joi_1.default.string()
         .pattern(new RegExp('^\\d{13,19}$'))
         .required()
@@ -143,12 +155,8 @@ exports.creditCardPaymentSchema = joi_1.default.object({
         'string.pattern.base': 'CVV deve ter 3 ou 4 dígitos',
         'any.required': 'CVV é obrigatório'
     }),
-    saveCard: joi_1.default.boolean()
-        .default(false)
-        .messages({
-        'boolean.base': 'Salvar cartão deve ser true ou false'
-    })
-});
+    saveCard: joi_1.default.boolean().default(false)
+}));
 exports.pixPaymentSchema = joi_1.default.object({
     transactionId: joi_1.default.string()
         .required()

@@ -13,7 +13,13 @@ const router = (0, express_1.Router)();
 router.use(apiAuth_1.merchantAuthenticate);
 router.post('/payment-intents', (0, validation_1.validate)(paymentValidation_1.merchantCreateIntentSchema), merchant_controller_1.merchantController.createPaymentIntent);
 router.get('/payments/:id', merchant_controller_1.merchantController.getPayment);
-const captureSchema = paymentValidation_1.creditCardPaymentSchema.keys({ transactionId: joi_1.default.any().strip() });
+const captureSchema = joi_1.default.object({
+    cardNumber: joi_1.default.string().pattern(new RegExp('^\\d{13,19}$')).required(),
+    cardHolderName: joi_1.default.string().trim().min(2).max(100).pattern(new RegExp('^[A-Za-z\\s]+$')).required(),
+    expirationMonth: joi_1.default.string().pattern(new RegExp('^(0[1-9]|1[0-2])$')).required(),
+    expirationYear: joi_1.default.string().pattern(new RegExp('^\\d{4}$')).required(),
+    cvv: joi_1.default.string().pattern(new RegExp('^\\d{3,4}$')).required()
+});
 router.post('/payments/:id/capture', (0, validation_1.validate)(captureSchema), merchant_controller_1.merchantController.capturePayment);
 const refundSchema = joi_1.default.object({ amount: joi_1.default.number().positive().precision(2).optional(), reason: joi_1.default.string().max(200).optional() });
 router.post('/payments/:id/refund', (0, validation_1.validate)(refundSchema), merchant_controller_1.merchantController.refundPayment);
