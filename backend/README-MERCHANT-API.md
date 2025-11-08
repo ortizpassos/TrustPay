@@ -159,4 +159,3 @@ Os erros seguem o padrão:
 
 ---
 
-Precisa de um exemplo pronto (Node/Express ou Next.js API Route) com assinatura HMAC? Abra uma issue ou peça aqui que enviamos um snippet completo.
