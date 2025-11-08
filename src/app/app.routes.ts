@@ -11,6 +11,7 @@ import { NewPaymentPage } from './pages/new-payment/new-payment';
 import { TransactionsPage } from './pages/transactions/transactions';
 import { WalletPage } from './pages/wallet/wallet';
 import { AuthService } from './services/auth.service';
+import { DocumentacaoPage } from './pages/documentacao/documentacao';
 
 
 // Guard de autenticação
@@ -43,6 +44,7 @@ export const routes: Routes = [
   { path: 'carteira', component: WalletPage, canActivate: [authGuard] },
   { path: 'configuracoes', component: SettingsPage, canActivate: [authGuard] },
   { path: 'desenvolvedor', component: DeveloperPage, canActivate: [authGuard, merchantGuard] },
+  { path: 'documentacao', component: DocumentacaoPage, canActivate: [authGuard] },
   { path: 'minha-conta', component: SettingsPage, canActivate: [authGuard] },
 
 

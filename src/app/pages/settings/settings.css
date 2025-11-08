@@ -1,1 +1,9 @@
 @import '../dashboard/dashboard.css';
+
+/* Remover espaços verticais acima do conteúdo da carteira */
+.main {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-left: 0px;
+    margin-right: 0px;
+}

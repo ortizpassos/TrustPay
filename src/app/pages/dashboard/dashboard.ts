@@ -9,6 +9,7 @@ import { CardService } from '../../services/card.service';
 import { FormsModule } from '@angular/forms';
 import { SavedCard, SaveCardRequest } from '../../models/user.model';
 import { PaymentService } from '../../services/payment.service';
+import { forkJoin, of } from 'rxjs';
 import { Transaction } from '../../models/transaction.model';
 import { mapExternalCardReason } from '../../shared/utils/external-reason.util';
 
@@ -38,10 +39,35 @@ export class DashboardComponent {
   definindoPadraoId = signal<string | null>(null);
   transacoesRecentes = signal<Transaction[]>([]);
   carregandoTransacoes = signal(false);
+  
+  // Helpers para direção das transações (recebido vs pago)
+  private isIncoming(t: Transaction, u: User | null): boolean {
+    if (!u) return false;
+    const uid = (u as any).id || (u as any)._id || '';
+    const merchantKey = (u as any).merchantKey;
+    return (
+      (t.recipientUserId && t.recipientUserId === uid) ||
+      (!!merchantKey && !!t.merchantId && t.merchantId === merchantKey)
+    );
+  }
+
+  directionLabel(t: Transaction): 'Recebido' | 'Pago' {
+    return this.isIncoming(t, this.usuario()) ? 'Recebido' : 'Pago';
+  }
+
+  amountClass(t: Transaction): string {
+    return this.isIncoming(t, this.usuario()) ? 'amount-in' : 'amount-out';
+  }
+
+  signedAmount(t: Transaction): string {
+    const sign = this.isIncoming(t, this.usuario()) ? '+' : '-';
+    return `${sign} ${this.paymentService.formatCurrency(t.amount, t.currency)}`;
+  }
 
   novoCartao = signal<SaveCardRequest>({
     cardNumber: '',
     cardHolderName: '',
+    cardHolderCpf: '',
     expirationMonth: '',
     expirationYear: '',
     cvv: '',
@@ -114,18 +140,49 @@ export class DashboardComponent {
       return;
     }
     this.salvandoCartao.set(true);
-    this.cardService.saveCard({ ...dados }).subscribe({
-      next: (resp) => {
-        if (resp.success && resp.data) {
-          // Sucesso somente se backend validou externamente (backend já bloqueia salvar se inválido)
-          this.carregarCartoes();
-          this.novoCartao.set({ cardNumber: '', cardHolderName: '', expirationMonth: '', expirationYear: '', cvv: '', isDefault: false });
-          this.mostrarFormularioNovoCartao.set(false);
+    // Validação externa antes de salvar
+    this.cardService.validateCardExternally(dados).subscribe({
+      next: (extResp) => {
+        if (extResp.valid) {
+          // Só salva se a validação externa for positiva
+          const payload = this.cardService['buildSavePayload'](dados);
+          console.log('[FRONTEND][PAYLOAD ENVIADO PARA BACKEND]', payload);
+          this.cardService.saveCard(payload).subscribe({
+            next: (resp) => {
+              let novoCartaoSalvo: SavedCard | undefined = undefined;
+              if (resp.success) {
+                // Aceita tanto resp.card quanto resp.data (caso seja objeto)
+                if (resp.card) {
+                  novoCartaoSalvo = resp.card;
+                } else if (resp.data && !Array.isArray(resp.data)) {
+                  novoCartaoSalvo = resp.data as SavedCard;
+                }
+              }
+              if (novoCartaoSalvo) {
+                const listaAtual = this.cartoes();
+                this.cartoes.set([novoCartaoSalvo, ...listaAtual]);
+                this.novoCartao.set({ cardNumber: '', cardHolderName: '', cardHolderCpf: '', expirationMonth: '', expirationYear: '', cvv: '', isDefault: false });
+                this.mostrarFormularioNovoCartao.set(false);
+                this.errosCartao.set(['Cartão salvo com sucesso']);
+              } else {
+                const friendly = mapExternalCardReason(resp.error?.message) || resp.error?.message || 'Falha ao salvar cartão';
+                this.errosCartao.set([friendly]);
+              }
+              this.salvandoCartao.set(false);
+            },
+            error: (err) => {
+              const raw = err.error?.error?.message || err.error?.message || 'Erro inesperado';
+              const friendly = mapExternalCardReason(raw) || raw;
+              this.errosCartao.set([friendly]);
+              this.salvandoCartao.set(false);
+            }
+          });
         } else {
-          const friendly = mapExternalCardReason(resp.error?.message) || resp.error?.message || 'Falha ao salvar cartão';
-            this.errosCartao.set([friendly]);
+          // Bloqueia salvar se rejeitado externamente
+          const friendly = mapExternalCardReason(extResp.reason) || extResp.reason || 'Cartão rejeitado pela validação externa';
+          this.errosCartao.set([friendly]);
+          this.salvandoCartao.set(false);
         }
-        this.salvandoCartao.set(false);
       },
       error: (err) => {
         const raw = err.error?.error?.message || err.error?.message || 'Erro inesperado';
@@ -166,10 +223,54 @@ export class DashboardComponent {
   // ===== Transações Recentes =====
   carregarTransacoesRecentes(limit = 5): void {
     this.carregandoTransacoes.set(true);
+    const usuario = this.usuario();
+    const merchantId = usuario && usuario.merchantKey ? usuario.merchantKey : undefined;
+
+    // Se for merchant, buscamos RECEBIDOS (merchantId) e PAGOS (userId) e unimos
+    if (merchantId) {
+      forkJoin({
+        recebidos: this.paymentService.getRecentTransactions(limit, merchantId, 'in'),
+        pagos: this.paymentService.getRecentTransactions(limit, undefined, 'out')
+      }).subscribe({
+        next: ({ recebidos, pagos }) => {
+          const rAll = recebidos.success && recebidos.data?.transactions ? recebidos.data.transactions as Transaction[] : [];
+          const pAll = pagos.success && pagos.data?.transactions ? pagos.data.transactions as Transaction[] : [];
+          // Ordena individualmente por data desc
+          const rSorted = [...rAll].sort((a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime());
+          const pSorted = [...pAll].sort((a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime());
+          // Seleção balanceada: garantir presença de recebidos e pagos quando disponíveis
+          const half = Math.ceil(limit / 2);
+          const rPart = rSorted.slice(0, half);
+          const pPart = pSorted.slice(0, limit - rPart.length);
+          let combined = [...rPart, ...pPart];
+          // Se ainda houver espaço (ex.: poucos recebidos), completa com o restante mais recente de qualquer lista
+          if (combined.length < limit) {
+            const extras = [...rSorted.slice(rPart.length), ...pSorted.slice(pPart.length)]
+              .sort((a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime())
+              .slice(0, limit - combined.length);
+            combined = [...combined, ...extras];
+          }
+          this.transacoesRecentes.set(combined);
+          this.carregandoTransacoes.set(false);
+        },
+        error: () => {
+          this.transacoesRecentes.set([]);
+          this.carregandoTransacoes.set(false);
+        }
+      });
+      return;
+    }
+
+    // Usuário comum: apenas as transações onde ele é o pagador
     this.paymentService.getRecentTransactions(limit).subscribe({
       next: (resp) => {
         if (resp.success && resp.data?.transactions) {
-          this.transacoesRecentes.set(resp.data.transactions as Transaction[]);
+          const list = (resp.data.transactions as Transaction[]).sort((a, b) => {
+            const ta = new Date(a.createdAt as any).getTime();
+            const tb = new Date(b.createdAt as any).getTime();
+            return tb - ta;
+          });
+          this.transacoesRecentes.set(list);
         } else {
           this.transacoesRecentes.set([]);
         }
@@ -201,9 +302,12 @@ export class DashboardComponent {
   }
 
   descricaoTransacao(t: Transaction): string {
-    if (t.paymentMethod === 'credit_card') return 'Pagamento Cartão';
-    if (t.paymentMethod === 'pix') return 'Pagamento PIX';
-    return 'Transação';
+    // Mostrar apenas o método, sem o prefixo de direção (Recebido/Pago),
+    // pois a direção já é exibida no badge ao lado.
+    const method = t.paymentMethod === 'credit_card' ? 'Cartão'
+      : (t.paymentMethod === 'pix' ? 'PIX'
+      : (t.paymentMethod === 'saldo' || t.paymentMethod === 'internal_transfer' ? 'Transferência Interna' : 'Transação'));
+    return method;
   }
 
   // ===== Ações Rápidas =====

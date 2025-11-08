@@ -201,10 +201,15 @@ export class AuthService {
     return strongRegex.test(password);
   }
 
-  validateDocument(document: string): boolean {
-    // Validação simples de CPF (11 dígitos)
-    const cleanDoc = document.replace(/\D/g, '');
-    return cleanDoc.length === 11;
+  validateDocument(document: string, accountType?: string): boolean {
+    // Validação simples: aceita CPF (11 dígitos) ou CNPJ (14 dígitos)
+    const cleanDoc = (document || '').replace(/\D/g, '');
+    if (!cleanDoc) return false;
+    if (accountType === 'loja') {
+      return cleanDoc.length === 14;
+    }
+    // If accountType not provided, accept either CPF(11) or CNPJ(14)
+    return cleanDoc.length === 11 || cleanDoc.length === 14;
   }
 
   // Sanitização dos dados de registro para evitar envio de campos vazios
@@ -229,7 +234,7 @@ export class AuthService {
     }
     if (data.document) {
       const doc = data.document.replace(/\D/g, '');
-      if (doc.length === 11) payload.document = doc;
+      if (doc.length === 11 || doc.length === 14) payload.document = doc;
     }
     if (data.accountType) {
       payload.accountType = data.accountType;

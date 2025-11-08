@@ -11,6 +11,7 @@ router.post('/initiate', (0, paymentValidation_1.validatePayment)(paymentValidat
 router.get('/recent', payment_controller_1.paymentController.recentTransactions);
 router.post('/credit-card', (0, paymentValidation_1.validatePayment)(paymentValidation_2.creditCardPaymentSchema), payment_controller_1.paymentController.processCreditCardPayment);
 router.post('/pix', (0, paymentValidation_1.validatePayment)(paymentValidation_2.pixPaymentSchema), payment_controller_1.paymentController.processPixPayment);
+router.get('/report', payment_controller_1.paymentController.getReport);
 router.get('/pix/:transactionId/status', payment_controller_1.paymentController.checkPixStatus);
 router.get('/:transactionId', payment_controller_1.paymentController.getTransaction);
 router.patch('/:transactionId/cancel', payment_controller_1.paymentController.cancelTransaction);

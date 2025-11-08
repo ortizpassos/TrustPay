@@ -1,3 +1,23 @@
-@import '../dashboard/dashboard.css';
+.reports-container {
+	margin-top: 0 !important;
+	padding-top: 0 !important;
+	margin-left: 280px !important;
+}
+.reports-container {
+	margin-top: 0 !important;
+	padding-top: 0 !important;
+}
 
 .search input{padding:10px 12px;border-radius:8px;border:1px solid #e6e9ef;width:320px}
+
+.content {
+	margin-top: -50px !important;
+	padding-top: 0 !important;
+}
+
+.dashboard-content,
+.dashboard-card.full-width,
+.report-filters {
+	margin-top: 1px !important;
+	padding-top: 0 !important;
+}

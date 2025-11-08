@@ -8,6 +8,7 @@ import { mapExternalCardReason } from '../../shared/utils/external-reason.util';
 interface FormData {
   cardNumber: string;
   cardHolderName: string;
+  cardHolderCpf: string;
   expirationMonth: string;
   expirationYear: string;
   cvv: string;
@@ -31,6 +32,7 @@ export class CreditCardFormComponent {
   formData: FormData = {
     cardNumber: '',
     cardHolderName: '',
+    cardHolderCpf: '',
     expirationMonth: '',
     expirationYear: '',
     cvv: ''
@@ -89,6 +91,13 @@ export class CreditCardFormComponent {
       newErrors['cardHolderName'] = 'Nome do titular é obrigatório';
     }
 
+    // Validar CPF do titular do cartão
+    if (!this.formData.cardHolderCpf || !this.formData.cardHolderCpf.trim()) {
+      newErrors['cardHolderCpf'] = 'CPF do titular é obrigatório';
+    } else if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(this.formData.cardHolderCpf)) {
+      newErrors['cardHolderCpf'] = 'CPF inválido';
+    }
+
     // Validar mês de expiração
     const month = parseInt(this.formData.expirationMonth);
     if (!this.formData.expirationMonth || month < 1 || month > 12) {
@@ -132,6 +141,7 @@ export class CreditCardFormComponent {
       transactionId: this.transaction.id,
       cardNumber: this.formData.cardNumber.replace(/\s/g, ''),
       cardHolderName: this.formData.cardHolderName,
+      cardHolderCpf: this.formData.cardHolderCpf,
       expirationMonth: this.formData.expirationMonth.padStart(2, '0'),
       expirationYear: this.formData.expirationYear,
       cvv: this.formData.cvv

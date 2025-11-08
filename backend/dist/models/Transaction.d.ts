@@ -1,6 +1,6 @@
 import mongoose, { Document } from 'mongoose';
 export type TransactionStatus = 'PENDING' | 'PROCESSING' | 'APPROVED' | 'DECLINED' | 'FAILED' | 'EXPIRED' | 'REFUNDED';
-export type PaymentMethod = 'credit_card' | 'pix';
+export type PaymentMethod = 'credit_card' | 'pix' | 'internal_transfer';
 export interface ICustomer {
     name: string;
     email: string;

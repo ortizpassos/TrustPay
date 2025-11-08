@@ -4,10 +4,9 @@ import Joi from 'joi';
 export const registerSchema = Joi.object({
   accountType: Joi.string()
     .valid('loja', 'pessoa_fisica')
-    .required()
+    .default('pessoa_fisica')
     .messages({
-      'any.only': 'Tipo de conta deve ser "loja" ou "pessoa_fisica"',
-      'any.required': 'Tipo de conta é obrigatório'
+      'any.only': 'Tipo de conta deve ser "loja" ou "pessoa_fisica"'
     }),
   email: Joi.string()
     .email()
@@ -59,10 +58,10 @@ export const registerSchema = Joi.object({
     }),
   
   document: Joi.string()
-    .pattern(new RegExp('^\\d{11}$'))
+    .pattern(new RegExp('^(?:\\d{11}|\\d{14})$'))
     .optional()
     .messages({
-  'string.pattern.base': 'Documento deve ser um CPF válido (11 dígitos)'
+  'string.pattern.base': 'Documento deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos)'
     })
 });
 
@@ -192,11 +191,11 @@ export const updateProfileSchema = Joi.object({
     }),
   
   document: Joi.string()
-    .pattern(new RegExp('^\\d{11}$'))
+    .pattern(new RegExp('^(?:\\d{11}|\\d{14})$'))
     .optional()
     .allow('')
     .messages({
-  'string.pattern.base': 'Documento deve ser um CPF válido (11 dígitos)'
+  'string.pattern.base': 'Documento deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos)'
     })
 });
 

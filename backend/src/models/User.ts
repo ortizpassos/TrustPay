@@ -84,9 +84,11 @@ const UserSchema = new Schema<IUser>({
     validate: {
       validator: function(v: string) {
         if (!v) return true; // Campo opcional
-        return /^\d{11}$/.test(v.replace(/\D/g, ''));
+        const clean = v.replace(/\D/g, '');
+        // aceita CPF (11) ou CNPJ (14)
+        return /^\d{11}$/.test(clean) || /^\d{14}$/.test(clean);
       },
-      message: 'Document must be a valid CPF (11 digits)'
+      message: 'Document must be a valid CPF (11 digits) or CNPJ (14 digits)'
     }
   },
   isEmailVerified: {

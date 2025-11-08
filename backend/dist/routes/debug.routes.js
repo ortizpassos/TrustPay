@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_1 = require("../middleware/auth");
 const encryption_service_1 = require("../services/encryption.service");
+const Transaction_1 = require("../models/Transaction");
+const User_1 = require("../models/User");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
 router.get('/encryption', (req, res, next) => {
@@ -39,4 +41,39 @@ router.get('/encryption', (req, res, next) => {
     }
 });
 exports.default = router;
+router.post('/topup', async (req, res) => {
+    try {
+        const userId = req.user?._id;
+        if (!userId) {
+            res.status(401).json({ success: false, error: { message: 'Não autenticado' } });
+            return;
+        }
+        const amount = Number(req.body?.amount || 0);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            res.status(400).json({ success: false, error: { message: 'Valor inválido' } });
+            return;
+        }
+        const user = await User_1.User.findById(userId);
+        const orderId = 'TOPUP-' + Date.now();
+        const tx = await Transaction_1.Transaction.create({
+            orderId,
+            userId: undefined,
+            recipientUserId: userId,
+            amount,
+            currency: 'BRL',
+            paymentMethod: 'internal_transfer',
+            status: 'APPROVED',
+            customer: {
+                name: `${user?.firstName || 'Dev'} ${user?.lastName || 'User'}`.trim(),
+                email: user?.email || 'dev@example.com'
+            },
+            returnUrl: 'http://localhost/dev',
+            callbackUrl: 'http://localhost/dev'
+        });
+        res.status(201).json({ success: true, data: tx.toJSON() });
+    }
+    catch (e) {
+        res.status(500).json({ success: false, error: { message: e.message || 'Falha no topup' } });
+    }
+});
 //# sourceMappingURL=debug.routes.js.map

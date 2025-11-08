@@ -8,9 +8,12 @@ const cardValidation_2 = require("../utils/cardValidation");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
 router.get('/', card_controller_1.cardController.getUserCards);
-router.post('/', (0, cardValidation_1.validateCard)(cardValidation_2.saveCardSchema), card_controller_1.cardController.saveCard);
+router.post('/', (req, res, next) => {
+    console.log('[CARD_ROUTES][BODY BRUTO RECEBIDO]:', req.body);
+    next();
+}, (0, cardValidation_1.validateCard)(cardValidation_2.saveCardSchema), card_controller_1.cardController.saveCard);
 router.get('/:cardId', card_controller_1.cardController.getCard);
-router.put('/:cardId', (0, cardValidation_1.validateCard)(cardValidation_2.updateCardSchema), card_controller_1.cardController.updateCard);
+router.put('/:cardId', (0, cardValidation_1.validateCard)(cardValidation_2.saveCardSchema), card_controller_1.cardController.updateCard);
 router.delete('/:cardId', card_controller_1.cardController.deleteCard);
 router.patch('/:cardId/set-default', card_controller_1.cardController.setDefaultCard);
 router.get('/check/expiration', card_controller_1.cardController.checkCardExpiration);

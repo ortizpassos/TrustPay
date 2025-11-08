@@ -13,10 +13,22 @@
         <div class="dashboard-grid">
           <div class="dashboard-card full-width">
             <h2>Carteira</h2>
-            <p>Área reservada para futuras funcionalidades relacionadas a saldo, métodos e meios de pagamento.</p>
-            <div class="placeholder-box">
-              <p>Em breve: visão geral de saldo, gestão de fundos, histórico detalhado, transferências internas, etc.</p>
+            <div *ngIf="carregando(); else resumoCarteira">
+              <p>Carregando saldo...</p>
             </div>
+            <ng-template #resumoCarteira>
+              <div class="wallet-summary">
+                <div class="wallet-balance saldo-destaque">
+                  <span class="label">Saldo Disponível:</span>
+                  <span class="value saldo-valor">{{ saldo() | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</span>
+                </div>
+                <div class="wallet-pending pendente-destaque">
+                  <span class="label">A Receber (Pendentes):</span>
+                  <span class="value pendente-valor">{{ totalPendente() | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</span>
+                </div>
+              </div>
+              <wallet-receipts-chart></wallet-receipts-chart>
+            </ng-template>
           </div>
         </div>
       </div>

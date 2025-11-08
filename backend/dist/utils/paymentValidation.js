@@ -35,60 +35,77 @@ exports.initiatePaymentSchema = joi_1.default.object({
         'any.only': 'Moeda deve ser BRL, USD ou EUR'
     }),
     paymentMethod: joi_1.default.string()
-        .valid('credit_card', 'pix')
+        .valid('credit_card', 'pix', 'internal_transfer', 'saldo')
         .required()
         .messages({
-        'any.only': 'Método de pagamento deve ser credit_card ou pix',
+        'any.only': 'Método de pagamento deve ser credit_card, pix, internal_transfer ou saldo',
         'any.required': 'Método de pagamento é obrigatório'
     }),
-    customer: joi_1.default.object({
-        name: joi_1.default.string()
-            .trim()
-            .min(2)
-            .max(100)
-            .required()
-            .messages({
-            'string.min': 'Nome do cliente deve ter no mínimo 2 caracteres',
-            'string.max': 'Nome do cliente não pode ter mais de 100 caracteres',
-            'any.required': 'Nome do cliente é obrigatório'
-        }),
-        email: joi_1.default.string()
-            .email()
-            .lowercase()
-            .trim()
-            .required()
-            .messages({
-            'string.email': 'Informe um email válido do cliente',
-            'any.required': 'Email do cliente é obrigatório'
-        }),
-        document: joi_1.default.string()
-            .pattern(new RegExp('^\\d{11}$'))
-            .optional()
-            .messages({
-            'string.pattern.base': 'Documento do cliente deve ser um CPF válido (11 dígitos)'
-        })
-    }).required(),
-    returnUrl: joi_1.default.string()
-        .uri()
-        .required()
-        .messages({
-        'string.uri': 'Return URL deve ser uma URL válida',
-        'any.required': 'Return URL é obrigatória'
+    cardId: joi_1.default.alternatives().conditional('paymentMethod', {
+        is: joi_1.default.valid('credit_card'),
+        then: joi_1.default.string().optional(),
+        otherwise: joi_1.default.any().strip()
     }),
-    callbackUrl: joi_1.default.string()
-        .uri()
-        .required()
-        .messages({
-        'string.uri': 'Callback URL deve ser uma URL válida',
-        'any.required': 'Callback URL é obrigatória'
+    from: joi_1.default.object({
+        email: joi_1.default.string().email().required(),
+        name: joi_1.default.string().min(2).max(100).optional(),
+        document: joi_1.default.string().optional()
+    }).optional(),
+    to: joi_1.default.object({
+        email: joi_1.default.string().email().required()
+    }).optional(),
+    customer: joi_1.default.alternatives().conditional('paymentMethod', {
+        is: joi_1.default.valid('internal_transfer', 'saldo'),
+        then: joi_1.default.object({
+            name: joi_1.default.string().trim().min(2).max(100).optional(),
+            email: joi_1.default.string().email().lowercase().trim().optional(),
+            document: joi_1.default.string().pattern(new RegExp('^(?:\\d{11}|\\d{14})$')).optional()
+        }).optional(),
+        otherwise: joi_1.default.object({
+            name: joi_1.default.string().trim().min(2).max(100).required().messages({
+                'string.min': 'Nome do cliente deve ter no mínimo 2 caracteres',
+                'string.max': 'Nome do cliente não pode ter mais de 100 caracteres',
+                'any.required': 'Nome do cliente é obrigatório'
+            }),
+            email: joi_1.default.string().email().lowercase().trim().required().messages({
+                'string.email': 'Informe um email válido do cliente',
+                'any.required': 'Email do cliente é obrigatório'
+            }),
+            document: joi_1.default.string().pattern(new RegExp('^\\d{11}$')).optional().messages({
+                'string.pattern.base': 'Documento do cliente deve ser um CPF válido (11 dígitos)'
+            })
+        }).required()
+    }),
+    returnUrl: joi_1.default.alternatives().conditional('paymentMethod', {
+        is: joi_1.default.valid('internal_transfer', 'saldo'),
+        then: joi_1.default.string().uri().optional(),
+        otherwise: joi_1.default.string().uri().required().messages({
+            'string.uri': 'Return URL deve ser uma URL válida',
+            'any.required': 'Return URL é obrigatória'
+        })
+    }),
+    callbackUrl: joi_1.default.alternatives().conditional('paymentMethod', {
+        is: joi_1.default.valid('internal_transfer', 'saldo'),
+        then: joi_1.default.string().uri().optional(),
+        otherwise: joi_1.default.string().uri().required().messages({
+            'string.uri': 'Callback URL deve ser uma URL válida',
+            'any.required': 'Callback URL é obrigatória'
+        })
+    }),
+    installments: joi_1.default.alternatives().conditional('paymentMethod', {
+        is: joi_1.default.valid('credit_card'),
+        then: joi_1.default.object({
+            quantity: joi_1.default.number().integer().min(1).max(24).optional()
+        }).optional(),
+        otherwise: joi_1.default.any().strip()
     })
 });
-exports.creditCardPaymentSchema = joi_1.default.object({
-    transactionId: joi_1.default.string()
-        .required()
-        .messages({
-        'any.required': 'Transaction ID é obrigatório'
-    }),
+exports.creditCardPaymentSchema = joi_1.default.alternatives().try(joi_1.default.object({
+    transactionId: joi_1.default.string().required(),
+    savedCardId: joi_1.default.string().required(),
+    saveCard: joi_1.default.boolean().default(false)
+}), joi_1.default.object({
+    transactionId: joi_1.default.string().required(),
     cardNumber: joi_1.default.string()
         .pattern(new RegExp('^\\d{13,19}$'))
         .required()
@@ -138,12 +155,8 @@ exports.creditCardPaymentSchema = joi_1.default.object({
         'string.pattern.base': 'CVV deve ter 3 ou 4 dígitos',
         'any.required': 'CVV é obrigatório'
     }),
-    saveCard: joi_1.default.boolean()
-        .default(false)
-        .messages({
-        'boolean.base': 'Salvar cartão deve ser true ou false'
-    })
-});
+    saveCard: joi_1.default.boolean().default(false)
+}));
 exports.pixPaymentSchema = joi_1.default.object({
     transactionId: joi_1.default.string()
         .required()

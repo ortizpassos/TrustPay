@@ -18,7 +18,21 @@ class CardController {
             res.json(response);
         });
         this.saveCard = (0, errorHandler_1.asyncHandler)(async (req, res) => {
+            console.log('[CARD_CONTROLLER][REQUEST BODY - RECEBIDO NO CONTROLLER]:', JSON.stringify(req.body));
+            console.log('[CARD_CONTROLLER][Campos recebidos]:', {
+                cardNumber: req.body.cardNumber,
+                cardHolderName: req.body.cardHolderName,
+                cardHolderCpf: req.body.cardHolderCpf,
+                expirationMonth: req.body.expirationMonth,
+                expirationYear: req.body.expirationYear,
+                cvv: req.body.cvv,
+                isDefault: req.body.isDefault
+            });
             const user = req.user;
+            let cardHolderCpf = req.body.cardHolderCpf;
+            if (!cardHolderCpf) {
+                console.warn('[CARD_CONTROLLER][AVISO] Campo cardHolderCpf não recebido no body. Campos recebidos:', Object.keys(req.body));
+            }
             const { cardNumber, cardHolderName, expirationMonth, expirationYear, cvv, isDefault } = req.body;
             try {
                 if (!cardNumber || !cvv || !cardHolderName || !expirationMonth || !expirationYear) {
@@ -39,6 +53,7 @@ class CardController {
                 if (existingCard) {
                     throw new errorHandler_1.AppError('Este cartão já está salvo', 400, 'CARD_ALREADY_EXISTS');
                 }
+                console.log('[CARD_CONTROLLER][CPF para validação externa]:', cardHolderCpf);
                 const externalResult = await externalCardValidation_service_1.externalCardValidationService.validate({
                     cardNumber,
                     cardHolderName,
@@ -46,10 +61,10 @@ class CardController {
                     expirationYear,
                     cvv,
                     user: {
-                        id: user._id.toString(),
                         email: user.email,
                         firstName: user.firstName,
-                        lastName: user.lastName
+                        lastName: user.lastName,
+                        document: cardHolderCpf ? String(cardHolderCpf) : undefined
                     }
                 });
                 if (process.env.EXTERNAL_CARD_API_DEBUG === 'true') {
@@ -61,7 +76,11 @@ class CardController {
                     });
                 }
                 if (!externalResult.valid) {
-                    throw new errorHandler_1.AppError(`Cartão rejeitado pela validação externa${externalResult.reason ? ': ' + externalResult.reason : ''}`, 422, 'EXTERNAL_CARD_VALIDATION_FAILED');
+                    res.status(422).json({
+                        message: externalResult.reason || 'Cartão rejeitado pela validação externa',
+                        success: false
+                    });
+                    return;
                 }
                 const tokenizedCard = encryption_service_1.encryptionService.tokenizeCard({
                     cardNumber,
@@ -76,19 +95,19 @@ class CardController {
                     lastFourDigits: tokenizedCard.lastFourDigits,
                     cardBrand,
                     cardHolderName,
+                    cardHolderCpf: req.body.cardHolderCpf,
                     expirationMonth,
                     expirationYear,
                     isDefault: isDefault || false
                 });
                 await savedCard.save();
-                const response = {
+                res.status(201).json({
                     success: true,
-                    data: {
-                        card: savedCard.toJSON(),
-                        message: 'Cartão salvo com sucesso (validado externamente)'
-                    }
-                };
-                res.status(201).json(response);
+                    valid: true,
+                    reasons: externalResult.reasons || {},
+                    message: 'Cartão salvo com sucesso',
+                    card: savedCard.toJSON()
+                });
             }
             catch (error) {
                 const isDev = process.env.NODE_ENV !== 'production';
@@ -96,25 +115,44 @@ class CardController {
                     console.error('[CARD_SAVE_ERROR] Root cause:', error);
                 }
                 if (error instanceof errorHandler_1.AppError) {
-                    throw error;
-                }
-                if (error?.code === 11000) {
-                    throw new errorHandler_1.AppError('Este cartão já está salvo', 400, 'CARD_ALREADY_EXISTS');
-                }
-                if (error?.message && /Card has expired/i.test(error.message)) {
-                    throw new errorHandler_1.AppError('Cartão expirado', 400, 'CARD_EXPIRED');
-                }
-                if (error?.message && /ENCRYPTION_KEY must be exactly 32 characters long/i.test(error.message)) {
-                    throw new errorHandler_1.AppError('Chave de criptografia inválida ou ausente (32 caracteres obrigatórios)', 500, 'ENCRYPTION_KEY_INVALID');
+                    res.status(error.statusCode || 400).json({
+                        success: false,
+                        error: {
+                            message: error.message,
+                            code: error.code || 'CARD_SAVE_ERROR'
+                        }
+                    });
+                    return;
                 }
                 if (error?.message && /Encryption failed/i.test(error.message)) {
-                    throw new errorHandler_1.AppError('Falha no processo de criptografia', 500, 'ENCRYPTION_ERROR');
+                    res.status(500).json({
+                        success: false,
+                        error: {
+                            message: 'Falha no processo de criptografia',
+                            code: 'ENCRYPTION_ERROR'
+                        }
+                    });
+                    return;
                 }
                 if (error?.name === 'ValidationError') {
-                    throw new errorHandler_1.AppError('Falha na validação do cartão na camada de persistência', 400, 'CARD_PERSIST_VALIDATION_ERROR');
+                    res.status(400).json({
+                        success: false,
+                        error: {
+                            message: 'Falha na validação do cartão na camada de persistência',
+                            code: 'CARD_PERSIST_VALIDATION_ERROR'
+                        }
+                    });
+                    return;
                 }
                 const baseMessage = 'Falha ao salvar cartão';
-                throw new errorHandler_1.AppError(isDev && error?.message ? `${baseMessage}: ${error.message}` : baseMessage, 500, 'CARD_SAVE_ERROR');
+                res.status(500).json({
+                    success: false,
+                    error: {
+                        message: isDev && error?.message ? `${baseMessage}: ${error.message}` : baseMessage,
+                        code: 'CARD_SAVE_ERROR'
+                    }
+                });
+                return;
             }
         });
         this.getCard = (0, errorHandler_1.asyncHandler)(async (req, res) => {

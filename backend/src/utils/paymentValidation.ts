@@ -34,128 +34,142 @@ export const initiatePaymentSchema = Joi.object({
     }),
   
   paymentMethod: Joi.string()
-    .valid('credit_card', 'pix')
+    .valid('credit_card', 'pix', 'internal_transfer', 'saldo')
     .required()
     .messages({
-  'any.only': 'Método de pagamento deve ser credit_card ou pix',
-  'any.required': 'Método de pagamento é obrigatório'
+      'any.only': 'Método de pagamento deve ser credit_card, pix, internal_transfer ou saldo',
+      'any.required': 'Método de pagamento é obrigatório'
     }),
+  // Permitir referenciar um cartão salvo ao iniciar pagamento com cartão
+  cardId: Joi.alternatives().conditional('paymentMethod', {
+    is: Joi.valid('credit_card'),
+    then: Joi.string().optional(),
+    otherwise: Joi.any().strip()
+  }),
+  from: Joi.object({
+    email: Joi.string().email().required(),
+    name: Joi.string().min(2).max(100).optional(),
+    document: Joi.string().optional()
+  }).optional(),
+  to: Joi.object({
+    email: Joi.string().email().required()
+  }).optional(),
   
-  customer: Joi.object({
-    name: Joi.string()
-      .trim()
-      .min(2)
-      .max(100)
-      .required()
-      .messages({
-  'string.min': 'Nome do cliente deve ter no mínimo 2 caracteres',
-  'string.max': 'Nome do cliente não pode ter mais de 100 caracteres',
-  'any.required': 'Nome do cliente é obrigatório'
+  customer: Joi.alternatives().conditional('paymentMethod', {
+    is: Joi.valid('internal_transfer', 'saldo'),
+    then: Joi.object({
+      name: Joi.string().trim().min(2).max(100).optional(),
+      email: Joi.string().email().lowercase().trim().optional(),
+      document: Joi.string().pattern(new RegExp('^(?:\\d{11}|\\d{14})$')).optional()
+    }).optional(),
+    otherwise: Joi.object({
+      name: Joi.string().trim().min(2).max(100).required().messages({
+        'string.min': 'Nome do cliente deve ter no mínimo 2 caracteres',
+        'string.max': 'Nome do cliente não pode ter mais de 100 caracteres',
+        'any.required': 'Nome do cliente é obrigatório'
       }),
-    
-    email: Joi.string()
-      .email()
-      .lowercase()
-      .trim()
-      .required()
-      .messages({
-  'string.email': 'Informe um email válido do cliente',
-  'any.required': 'Email do cliente é obrigatório'
+      email: Joi.string().email().lowercase().trim().required().messages({
+        'string.email': 'Informe um email válido do cliente',
+        'any.required': 'Email do cliente é obrigatório'
       }),
-    
-    document: Joi.string()
-      .pattern(new RegExp('^\\d{11}$'))
-      .optional()
-      .messages({
-  'string.pattern.base': 'Documento do cliente deve ser um CPF válido (11 dígitos)'
+      document: Joi.string().pattern(new RegExp('^\\d{11}$')).optional().messages({
+        'string.pattern.base': 'Documento do cliente deve ser um CPF válido (11 dígitos)'
       })
-  }).required(),
-  
-  returnUrl: Joi.string()
-    .uri()
-    .required()
-    .messages({
-  'string.uri': 'Return URL deve ser uma URL válida',
-  'any.required': 'Return URL é obrigatória'
-    }),
-  
-  callbackUrl: Joi.string()
-    .uri()
-    .required()
-    .messages({
-  'string.uri': 'Callback URL deve ser uma URL válida',
-  'any.required': 'Callback URL é obrigatória'
+    }).required()
+  }),
+
+  returnUrl: Joi.alternatives().conditional('paymentMethod', {
+    is: Joi.valid('internal_transfer', 'saldo'),
+    then: Joi.string().uri().optional(),
+    otherwise: Joi.string().uri().required().messages({
+      'string.uri': 'Return URL deve ser uma URL válida',
+      'any.required': 'Return URL é obrigatória'
     })
+  }),
+
+  callbackUrl: Joi.alternatives().conditional('paymentMethod', {
+    is: Joi.valid('internal_transfer', 'saldo'),
+    then: Joi.string().uri().optional(),
+    otherwise: Joi.string().uri().required().messages({
+      'string.uri': 'Callback URL deve ser uma URL válida',
+      'any.required': 'Callback URL é obrigatória'
+    })
+  }),
+
+  // Parcelamento: permitido apenas para cartão de crédito
+  installments: Joi.alternatives().conditional('paymentMethod', {
+    is: Joi.valid('credit_card'),
+    then: Joi.object({
+      quantity: Joi.number().integer().min(1).max(24).optional()
+    }).optional(),
+    otherwise: Joi.any().strip()
+  })
 });
 
 // Validação de Pagamento com Cartão de Crédito
-export const creditCardPaymentSchema = Joi.object({
-  transactionId: Joi.string()
-    .required()
-    .messages({
-  'any.required': 'Transaction ID é obrigatório'
-    }),
-  
-  cardNumber: Joi.string()
-    .pattern(new RegExp('^\\d{13,19}$'))
-    .required()
-    .messages({
-  'string.pattern.base': 'Número do cartão deve ter 13-19 dígitos',
-  'any.required': 'Número do cartão é obrigatório'
-    }),
-  
-  cardHolderName: Joi.string()
-    .trim()
-    .min(2)
-    .max(100)
-    .pattern(new RegExp('^[A-Za-z\\s]+$'))
-    .required()
-    .messages({
-  'string.min': 'Nome do titular deve ter no mínimo 2 caracteres',
-  'string.max': 'Nome do titular não pode ter mais de 100 caracteres',
-  'string.pattern.base': 'Nome do titular deve conter apenas letras e espaços',
-  'any.required': 'Nome do titular é obrigatório'
-    }),
-  
-  expirationMonth: Joi.string()
-    .pattern(new RegExp('^(0[1-9]|1[0-2])$'))
-    .required()
-    .messages({
-  'string.pattern.base': 'Mês de expiração deve ser 01-12',
-  'any.required': 'Mês de expiração é obrigatório'
-    }),
-  
-  expirationYear: Joi.string()
-    .pattern(new RegExp('^\\d{4}$'))
-    .custom((value, helpers) => {
-      const year = parseInt(value);
-      const currentYear = new Date().getFullYear();
-      if (year < currentYear || year > currentYear + 20) {
-        return helpers.error('any.invalid');
-      }
-      return value;
-    })
-    .required()
-    .messages({
-  'string.pattern.base': 'Ano de expiração deve ter 4 dígitos',
-  'any.invalid': 'Ano de expiração inválido ou muito distante',
-  'any.required': 'Ano de expiração é obrigatório'
-    }),
-  
-  cvv: Joi.string()
-    .pattern(new RegExp('^\\d{3,4}$'))
-    .required()
-    .messages({
-  'string.pattern.base': 'CVV deve ter 3 ou 4 dígitos',
-  'any.required': 'CVV é obrigatório'
-    }),
-
-  saveCard: Joi.boolean()
-    .default(false)
-    .messages({
-  'boolean.base': 'Salvar cartão deve ser true ou false'
-    })
-});
+// Para captura no cartão, aceitar DOIS formatos:
+// A) savedCardId (usa cartão salvo do usuário)
+// B) Campos completos do cartão (número, nome, validade, cvv)
+export const creditCardPaymentSchema = Joi.alternatives().try(
+  Joi.object({
+    transactionId: Joi.string().required(),
+    savedCardId: Joi.string().required(),
+    saveCard: Joi.boolean().default(false)
+  }),
+  Joi.object({
+    transactionId: Joi.string().required(),
+    cardNumber: Joi.string()
+      .pattern(new RegExp('^\\d{13,19}$'))
+      .required()
+      .messages({
+        'string.pattern.base': 'Número do cartão deve ter 13-19 dígitos',
+        'any.required': 'Número do cartão é obrigatório'
+      }),
+    cardHolderName: Joi.string()
+      .trim()
+      .min(2)
+      .max(100)
+      .pattern(new RegExp('^[A-Za-z\\s]+$'))
+      .required()
+      .messages({
+        'string.min': 'Nome do titular deve ter no mínimo 2 caracteres',
+        'string.max': 'Nome do titular não pode ter mais de 100 caracteres',
+        'string.pattern.base': 'Nome do titular deve conter apenas letras e espaços',
+        'any.required': 'Nome do titular é obrigatório'
+      }),
+    expirationMonth: Joi.string()
+      .pattern(new RegExp('^(0[1-9]|1[0-2])$'))
+      .required()
+      .messages({
+        'string.pattern.base': 'Mês de expiração deve ser 01-12',
+        'any.required': 'Mês de expiração é obrigatório'
+      }),
+    expirationYear: Joi.string()
+      .pattern(new RegExp('^\\d{4}$'))
+      .custom((value, helpers) => {
+        const year = parseInt(value);
+        const currentYear = new Date().getFullYear();
+        if (year < currentYear || year > currentYear + 20) {
+          return helpers.error('any.invalid');
+        }
+        return value;
+      })
+      .required()
+      .messages({
+        'string.pattern.base': 'Ano de expiração deve ter 4 dígitos',
+        'any.invalid': 'Ano de expiração inválido ou muito distante',
+        'any.required': 'Ano de expiração é obrigatório'
+      }),
+    cvv: Joi.string()
+      .pattern(new RegExp('^\\d{3,4}$'))
+      .required()
+      .messages({
+        'string.pattern.base': 'CVV deve ter 3 ou 4 dígitos',
+        'any.required': 'CVV é obrigatório'
+      }),
+    saveCard: Joi.boolean().default(false)
+  })
+);
 
 // Validação de Pagamento PIX
 export const pixPaymentSchema = Joi.object({
@@ -288,7 +302,7 @@ export const validatePaymentMethodCard = (paymentMethod: string, cardNumber: str
 };
 
 // Middleware de validação aprimorada para pagamentos
-export const validatePayment = (schema: Joi.ObjectSchema) => {
+export const validatePayment = (schema: Joi.Schema) => {
   return (req: any, res: any, next: any) => {
     const { error, value } = schema.validate(req.body, {
       abortEarly: false,

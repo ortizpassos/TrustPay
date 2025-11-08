@@ -15,13 +15,34 @@ const PORT = process.env.MOCK_CARD_PORT || 4001;
 // Otherwise -> valid
 
 function classify(number) {
-  if (!/^[0-9]{13,19}$/.test(number)) return { valid: false, reason: 'INVALID_FORMAT' };
+  if (!/^[0-9]{13,19}$/.test(number)) return { success: false, status: 'DECLINED', reason: 'INVALID_FORMAT' };
+  if (number === '4111111111111111') {
+    return {
+      createdAt: new Date().toISOString(),
+      amount: 299.9,
+      success: true,
+      flow: 'CREDIT_AUTHORIZATION',
+      transactionId: 1,
+      merchantName: 'Tech Store SA',
+      typePayment: 'CREDIT',
+      status: 'AUTHORIZED'
+    };
+  }
   switch (number) {
-    case '4000000000000002': return { valid: false, reason: 'CARD_STOLEN' };
-    case '4000000000000127': return { valid: false, reason: 'INSUFFICIENT_FUNDS' };
-    case '4000000000000069': return { valid: false, reason: 'CARD_EXPIRED' };
-    case '4999999999999999': return { valid: false, reason: 'EXTERNAL_DECLINE' };
-    default: return { valid: true, riskScore: Math.floor(Math.random() * 30) };
+    case '4000000000000002': return { success: false, status: 'DECLINED', reason: 'CARD_STOLEN' };
+    case '4000000000000127': return { success: false, status: 'DECLINED', reason: 'INSUFFICIENT_FUNDS' };
+    case '4000000000000069': return { success: false, status: 'DECLINED', reason: 'CARD_EXPIRED' };
+    case '4999999999999999': return { success: false, status: 'DECLINED', reason: 'EXTERNAL_DECLINE' };
+    default: return {
+      createdAt: new Date().toISOString(),
+      amount: 299.9,
+      success: true,
+      flow: 'CREDIT_AUTHORIZATION',
+      transactionId: 2,
+      merchantName: 'Tech Store SA',
+      typePayment: 'CREDIT',
+      status: 'AUTHORIZED'
+    };
   }
 }
 

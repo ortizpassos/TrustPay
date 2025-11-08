@@ -56,9 +56,10 @@ const CustomerSchema = new mongoose_1.Schema({
             validator: function (v) {
                 if (!v)
                     return true;
-                return /^\d{11}$/.test(v.replace(/\D/g, ''));
+                const cleaned = v.replace(/\D/g, '');
+                return /^\d{11}$/.test(cleaned) || /^\d{14}$/.test(cleaned);
             },
-            message: 'Document must be a valid CPF (11 digits)'
+            message: 'Document must be a valid CPF (11) or CNPJ (14) digits'
         }
     }
 }, { _id: false });
@@ -113,7 +114,7 @@ const TransactionSchema = new mongoose_1.Schema({
     paymentMethod: {
         type: String,
         required: [true, 'Payment method is required'],
-        enum: ['credit_card', 'pix']
+        enum: ['credit_card', 'pix', 'internal_transfer']
     },
     status: {
         type: String,
@@ -127,9 +128,13 @@ const TransactionSchema = new mongoose_1.Schema({
     },
     returnUrl: {
         type: String,
-        required: [true, 'Return URL is required'],
+        required: [function () {
+                return this.paymentMethod !== 'internal_transfer';
+            }, 'Return URL is required'],
         validate: {
             validator: function (v) {
+                if (!v)
+                    return true;
                 try {
                     new URL(v);
                     return true;
@@ -143,9 +148,13 @@ const TransactionSchema = new mongoose_1.Schema({
     },
     callbackUrl: {
         type: String,
-        required: [true, 'Callback URL is required'],
+        required: [function () {
+                return this.paymentMethod !== 'internal_transfer';
+            }, 'Callback URL is required'],
         validate: {
             validator: function (v) {
+                if (!v)
+                    return true;
                 try {
                     new URL(v);
                     return true;

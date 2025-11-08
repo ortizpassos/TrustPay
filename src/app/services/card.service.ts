@@ -1,17 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { SavedCard, SaveCardRequest } from '../models/user.model';
+import { SavedCard, SaveCardRequest, SavedCardResponse } from '../models/user.model';
 import { getApiBase } from '../config/api.config';
 
-export interface SavedCardResponse {
-  success: boolean;
-  data?: SavedCard | SavedCard[];
-  error?: {
-    message: string;
-    code?: string;
-  };
-}
+// Removido: interface duplicada SavedCardResponse. Usar apenas do models/user.model.ts
 
 @Injectable({
   providedIn: 'root'
@@ -21,6 +14,20 @@ export class CardService {
 
   constructor(private http: HttpClient) {}
 
+  /**
+   * Valida cartão via API externa
+   */
+  validateCardExternally(cardData: SaveCardRequest): Observable<any> {
+    const payload = {
+      cardNumber: cardData.cardNumber.replace(/\D/g, ''),
+      ownerCpf: cardData.cardHolderCpf,
+      ownerName: cardData.cardHolderName,
+      expMonth: parseInt(cardData.expirationMonth),
+      expYear: parseInt(cardData.expirationYear)
+    };
+    return this.http.post('https://bankr-api.onrender.com/api/gateway/card/validate', payload);
+  }
+
   // Listar cartões salvos do usuário
   getUserCards(): Observable<SavedCardResponse> {
     return this.http.get<SavedCardResponse>(`${this.apiUrl}`);
@@ -28,8 +35,10 @@ export class CardService {
 
   // Salvar novo cartão
   saveCard(cardData: SaveCardRequest): Observable<SavedCardResponse> {
-    const payload = this.buildSavePayload(cardData);
-    return this.http.post<SavedCardResponse>(`${this.apiUrl}`, payload);
+  const payload = this.buildSavePayload(cardData);
+  // Log do payload normalizado para depuração
+  console.log('[CARD_SERVICE][Payload enviado ao backend]:', payload);
+  return this.http.post<SavedCardResponse>(`${this.apiUrl}`, payload);
   }
 
   // Obter cartão específico
@@ -102,10 +111,19 @@ export class CardService {
     const number = data.cardNumber.replace(/\D/g, '');
     const month = data.expirationMonth.padStart(2, '0');
     const year = data.expirationYear.trim();
-    const name = this.normalizeName(data.cardHolderName);
+    // Normaliza nome: remove acentos, caracteres especiais, deixa maiúsculo e só letras/espaços
+    const name = data.cardHolderName
+      .normalize('NFD')
+      .replace(/[^A-Za-z\s]/g, '')
+      .toUpperCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+    // Limpa CPF: só dígitos
+    const cpf = data.cardHolderCpf.replace(/\D/g, '');
     return {
       cardNumber: number,
       cardHolderName: name,
+      cardHolderCpf: cpf,
       expirationMonth: month,
       expirationYear: year,
       cvv: data.cvv.replace(/\D/g, ''),

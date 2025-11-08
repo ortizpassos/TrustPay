@@ -1,3 +1,12 @@
+export interface SavedCardResponse {
+  success: boolean;
+  data?: SavedCard | SavedCard[];
+  card?: SavedCard;
+  error?: {
+    message: string;
+    code?: string;
+  };
+}
 export interface User {
   accountType?: string;
   merchantKey?: string;
@@ -62,6 +71,7 @@ export interface SavedCard {
 export interface SaveCardRequest {
   cardNumber: string;
   cardHolderName: string;
+  cardHolderCpf: string;
   expirationMonth: string;
   expirationYear: string;
   cvv: string;

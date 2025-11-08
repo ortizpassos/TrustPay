@@ -102,6 +102,7 @@ class App {
         this.app.use('/api/payments', payment_routes_1.default);
         this.app.use('/api/cards', card_routes_1.default);
         this.app.use('/api/users', user_routes_1.default);
+        this.app.use('/api/wallet', require('./routes/wallet.routes').default);
         this.app.use('/api/merchant/v1', merchant_routes_1.default);
         console.log('🔑 Rotas merchant sempre ativas.');
         if (!env_1.env.isProd) {

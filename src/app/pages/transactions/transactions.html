@@ -14,10 +14,19 @@
         <option value="">Todos</option>
         <option value="credit_card">Cartão</option>
         <option value="pix">PIX</option>
+        <option value="internal_transfer">Transferência Interna</option>
+      </select>
+    </label>
+    <label>
+      Direção:
+      <select [(ngModel)]="filtroDirecao" (change)="aplicarFiltros()">
+        <option value="">Todas</option>
+        <option value="in">Recebidos</option>
+        <option value="out">Pagos</option>
       </select>
     </label>
     <div class="actions-inline">
-      <button class="btn-secondary" type="button" (click)="exportarCsv()">Exportar CSV</button>
+      <button class="btn-secondary" type="button" (click)="exportarPdf()">Exportar PDF</button>
     </div>
   </div>
 
@@ -33,6 +42,7 @@
         <tr>
           <th (click)="ordenar('createdAt')">Data {{ indicadorOrdenacao('createdAt') }}</th>
           <th (click)="ordenar('orderId')">Order</th>
+          <th>Direção</th>
           <th (click)="ordenar('paymentMethod')">Método {{ indicadorOrdenacao('paymentMethod') }}</th>
           <th (click)="ordenar('amount')">Valor {{ indicadorOrdenacao('amount') }}</th>
           <th>Base</th>
@@ -46,8 +56,11 @@
         <tr *ngFor="let t of transacoes()">
           <td>{{ t.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
           <td>{{ t.orderId }}</td>
+          <td>
+            <span class="direction-badge" [class.in]="directionLabel(t)==='Recebido'" [class.out]="directionLabel(t)==='Pago'">{{ directionLabel(t) }}</span>
+          </td>
           <td>{{ metodoLabel(t.paymentMethod) }}</td>
-          <td>{{ paymentService.formatCurrency(t.amount, t.currency) }}</td>
+          <td [class]="amountClass(t)">{{ signedAmount(t) }}</td>
           <td>{{ t.baseAmount ? paymentService.formatCurrency(t.baseAmount, t.currency) : '-' }}</td>
           <td>
             <ng-container *ngIf="jurosValor(t) as jv; else semjuros">

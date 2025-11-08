@@ -57,6 +57,24 @@
         }
       </div>
 
+      <!-- CPF do Titular do Cartão -->
+      <div class="space-y-2">
+        <label for="cardHolderCpf" class="label">CPF do Titular do Cartão</label>
+        <input
+          id="cardHolderCpf"
+          type="text"
+          placeholder="000.000.000-00"
+          [value]="formData.cardHolderCpf"
+          (input)="onInputChange('cardHolderCpf', $any($event.target).value)"
+          maxlength="14"
+          autocomplete="cc-cpf"
+          [class]="'input ' + (errors['cardHolderCpf'] ? 'border-error' : '')"
+        />
+        @if (errors['cardHolderCpf']) {
+          <p class="error-text">{{ errors['cardHolderCpf'] }}</p>
+        }
+      </div>
+
       <!-- Validade -->
       <div class="grid grid-cols-2 gap-4">
         <div class="space-y-2">

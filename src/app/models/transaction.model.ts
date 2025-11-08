@@ -6,7 +6,9 @@ export type TransactionStatus =
   | 'FAILED' 
   | 'EXPIRED';
 
-export type PaymentMethod = 'credit_card' | 'pix';
+// Note: frontend uses 'saldo' label but backend persists 'internal_transfer'.
+// We'll accept both on the UI layer.
+export type PaymentMethod = 'credit_card' | 'pix' | 'saldo' | 'internal_transfer';
 
 export interface Customer {
   name: string;
@@ -17,6 +19,10 @@ export interface Customer {
 export interface Transaction {
   id: string;
   orderId: string;
+  // Present when transaction belongs to a merchant sale
+  merchantId?: string;
+  // P2P: user who received an internal transfer
+  recipientUserId?: string;
   amount: number;
   baseAmount?: number;
   currency: string;
@@ -60,11 +66,13 @@ export interface PaymentInitiateRequest {
 
 export interface CreditCardPaymentRequest {
   transactionId: string;
-  cardNumber: string;
-  cardHolderName: string;
-  expirationMonth: string;
-  expirationYear: string;
-  cvv: string;
+  savedCardId?: string;
+  cardNumber?: string;
+  cardHolderName?: string;
+  cardHolderCpf?: string;
+  expirationMonth?: string;
+  expirationYear?: string;
+  cvv?: string;
 }
 
 export interface PixPaymentRequest {

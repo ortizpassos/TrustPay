@@ -68,6 +68,10 @@
               <label>Nome Impresso</label>
               <input type="text" [(ngModel)]="novoCartao().cardHolderName" name="cardHolderName" placeholder="EX: JOAO SILVA" />
             </div>
+            <div class="field">
+              <label>CPF do Titular</label>
+              <input type="text" [(ngModel)]="novoCartao().cardHolderCpf" name="cardHolderCpf" placeholder="000.000.000-00" maxlength="14" />
+            </div>
             <div class="field small">
               <label>Mês</label>
               <input type="text" maxlength="2" [(ngModel)]="novoCartao().expirationMonth" name="expirationMonth" placeholder="MM" />
@@ -105,10 +109,13 @@
           <div class="transactions-list" *ngIf="transacoesRecentes().length > 0; else vazioTransacoes">
             <div class="transaction-item" *ngFor="let t of transacoesRecentes()">
               <div class="transaction-info">
-                <span class="transaction-description">{{ descricaoTransacao(t) }}</span>
-                <span class="transaction-date">{{ t.createdAt | date:'dd/MM/AAAA HH:mm' }}</span>
+                <span class="transaction-description">
+                  <span class="direction-badge" [class.in]="directionLabel(t)==='Recebido'" [class.out]="directionLabel(t)==='Pago'">{{ directionLabel(t) }}</span>
+                  {{ descricaoTransacao(t) }}
+                </span>
+                <span class="transaction-date">{{ t.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
               </div>
-              <span class="transaction-amount">{{ paymentService.formatCurrency(t.amount, t.currency) }}</span>
+              <span class="transaction-amount" [class]="amountClass(t)">{{ signedAmount(t) }}</span>
               <span class="transaction-status" [class]="'transaction-status ' + statusClass(t.status)">{{ formatStatus(t.status) }}</span>
             </div>
           </div>

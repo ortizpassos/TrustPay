@@ -37,32 +37,32 @@
       <!-- Nome e Sobrenome -->
       <div class="form-row">
         <div class="form-group">
-          <label for="firstName" class="form-label">Nome *</label>
+          <label for="firstName" class="form-label">{{ dadosCadastro.accountType === 'loja' ? 'Razão social *' : 'Nome *' }}</label>
           <input
             id="firstName"
             type="text"
-            placeholder="Seu nome"
+            [placeholder]="dadosCadastro.accountType === 'loja' ? 'Razão social da empresa' : 'Seu nome'"
             [(ngModel)]="dadosCadastro.firstName"
             (input)="onInputChange('firstName')"
             [class]="'form-input ' + (erros['firstName'] ? 'input-error' : '')"
             name="firstName"
-            autocomplete="given-name"
+            [attr.autocomplete]="dadosCadastro.accountType === 'loja' ? 'organization' : 'given-name'"
           />
           @if (erros['firstName']) {
             <span class="error-message">{{ erros['firstName'] }}</span>
           }
         </div>
         <div class="form-group">
-          <label for="lastName" class="form-label">Sobrenome *</label>
+          <label for="lastName" class="form-label">{{ dadosCadastro.accountType === 'loja' ? 'Nome Fantasia *' : 'Sobrenome *' }}</label>
           <input
             id="lastName"
             type="text"
-            placeholder="Seu sobrenome"
+            [placeholder]="dadosCadastro.accountType === 'loja' ? 'Nome fantasia' : 'Seu sobrenome'"
             [(ngModel)]="dadosCadastro.lastName"
             (input)="onInputChange('lastName')"
             [class]="'form-input ' + (erros['lastName'] ? 'input-error' : '')"
             name="lastName"
-            autocomplete="family-name"
+            [attr.autocomplete]="dadosCadastro.accountType === 'loja' ? 'organization' : 'family-name'"
           />
           @if (erros['lastName']) {
             <span class="error-message">{{ erros['lastName'] }}</span>
@@ -104,17 +104,17 @@
           }
         </div>
         <div class="form-group">
-          <label for="document" class="form-label">CPF</label>
+          <label for="document" class="form-label">{{ dadosCadastro.accountType === 'loja' ? 'CNPJ' : 'CPF' }}</label>
           <input
             id="document"
             type="text"
-            placeholder="000.000.000-00"
+            [placeholder]="dadosCadastro.accountType === 'loja' ? '00.000.000/0000-00' : '000.000.000-00'"
             [(ngModel)]="dadosCadastro.document"
             [ngModelOptions]="{ standalone: true }"
             (input)="onInputChange('document')"
             [class]="'form-input ' + (erros['document'] ? 'input-error' : '')"
             name="document"
-            maxlength="14"
+            [attr.maxlength]="dadosCadastro.accountType === 'loja' ? 18 : 14"
           />
           @if (erros['document']) {
             <span class="error-message">{{ erros['document'] }}</span>

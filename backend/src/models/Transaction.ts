@@ -9,7 +9,7 @@ export type TransactionStatus =
   | 'EXPIRED'
   | 'REFUNDED';
 
-export type PaymentMethod = 'credit_card' | 'pix';
+export type PaymentMethod = 'credit_card' | 'pix' | 'internal_transfer';
 
 export interface ICustomer {
   name: string;
@@ -75,9 +75,11 @@ const CustomerSchema = new Schema<ICustomer>({
     validate: {
       validator: function(v: string) {
         if (!v) return true; // Campo opcional
-        return /^\d{11}$/.test(v.replace(/\D/g, ''));
+        const cleaned = v.replace(/\D/g, '');
+        // Aceita CPF (11) ou CNPJ (14)
+        return /^\d{11}$/.test(cleaned) || /^\d{14}$/.test(cleaned);
       },
-      message: 'Document must be a valid CPF (11 digits)'
+      message: 'Document must be a valid CPF (11) or CNPJ (14) digits'
     }
   }
 }, { _id: false });
@@ -133,7 +135,7 @@ const TransactionSchema = new Schema<ITransaction>({
   paymentMethod: {
     type: String,
     required: [true, 'Payment method is required'],
-    enum: ['credit_card', 'pix']
+    enum: ['credit_card', 'pix', 'internal_transfer']
   },
   status: {
     type: String,
@@ -147,9 +149,13 @@ const TransactionSchema = new Schema<ITransaction>({
   },
   returnUrl: {
     type: String,
-    required: [true, 'Return URL is required'],
+    required: [function(this: any) {
+      // Para transferências internas (saldo), returnUrl não é obrigatório
+      return this.paymentMethod !== 'internal_transfer';
+    }, 'Return URL is required'],
     validate: {
       validator: function(v: string) {
+        if (!v) return true; // Permite vazio/ausente quando não obrigatório
         try {
           new URL(v);
           return true;
@@ -162,9 +168,13 @@ const TransactionSchema = new Schema<ITransaction>({
   },
   callbackUrl: {
     type: String,
-    required: [true, 'Callback URL is required'],
+    required: [function(this: any) {
+      // Para transferências internas (saldo), callbackUrl não é obrigatório
+      return this.paymentMethod !== 'internal_transfer';
+    }, 'Callback URL is required'],
     validate: {
       validator: function(v: string) {
+        if (!v) return true; // Permite vazio/ausente quando não obrigatório
         try {
           new URL(v);
           return true;

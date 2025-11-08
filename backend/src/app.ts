@@ -122,6 +122,8 @@ class App {
     this.app.use('/api/payments', paymentRoutes);
     this.app.use('/api/cards', cardRoutes);
     this.app.use('/api/users', userRoutes);
+    // Carteira
+    this.app.use('/api/wallet', require('./routes/wallet.routes').default);
     // Mantém as rotas merchant sempre ativas
     this.app.use('/api/merchant/v1', merchantRoutes);
     console.log('🔑 Rotas merchant sempre ativas.');

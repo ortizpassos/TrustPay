@@ -4,7 +4,6 @@ exports.merchantController = void 0;
 const Transaction_1 = require("../models/Transaction");
 const paymentGateway_service_1 = require("../services/paymentGateway.service");
 const errorHandler_1 = require("../middleware/errorHandler");
-const externalCardValidation_service_1 = require("../services/externalCardValidation.service");
 exports.merchantController = {
     createPaymentIntent: (0, errorHandler_1.asyncHandler)(async (req, res) => {
         const merchantKey = req.merchant.merchantKey;
@@ -47,37 +46,56 @@ exports.merchantController = {
             throw new errorHandler_1.AppError('Invalid payment method', 400, 'INVALID_PAYMENT_METHOD');
         if (tx.status !== 'PENDING')
             throw new errorHandler_1.AppError('Transaction not capturable', 400, 'INVALID_STATUS');
+        const { User } = require('../models/User');
+        let merchantName = tx.merchantId || 'E-Commerce';
+        const user = await User.findOne({ merchantKey: tx.merchantId });
+        if (user) {
+            merchantName = `${user.firstName} ${user.lastName}`;
+        }
+        const externalPayload = {
+            typePayment: 'CREDIT',
+            amount: tx.amount,
+            currency: tx.currency,
+            merchantName,
+            cardNumber,
+            installmentsTotal: tx.installments?.quantity || 1,
+            mcc: '5732',
+            category: 'ELETRONICOS',
+            createdAt: tx.createdAt.toISOString()
+        };
+        console.log('Payload para EXTERNAL_PURCHASE_API_URL:', JSON.stringify(externalPayload, null, 2));
+        const axios = require('axios');
+        let externalResp;
         try {
-            const [firstName, ...rest] = String(tx.customer?.name || '').trim().split(' ');
-            const lastName = rest.join(' ').trim();
-            const externalResult = await externalCardValidation_service_1.externalCardValidationService.validate({
-                cardNumber,
-                cardHolderName,
-                expirationMonth,
-                expirationYear,
-                cvv,
-                user: {
-                    id: tx._id.toString(),
-                    email: tx.customer?.email || 'unknown@merchant.local',
-                    firstName: firstName || undefined,
-                    lastName: lastName || undefined
-                }
+            externalResp = await axios.post(process.env.EXTERNAL_PURCHASE_API_URL, externalPayload, {
+                headers: {}
             });
-            if (!externalResult.valid) {
-                throw new errorHandler_1.AppError(`Cartão rejeitado pela validação externa${externalResult.reason ? ': ' + externalResult.reason : ''}`, 422, 'EXTERNAL_CARD_VALIDATION_FAILED');
-            }
         }
         catch (e) {
-            if (e instanceof errorHandler_1.AppError)
-                throw e;
-            throw new errorHandler_1.AppError('Falha na validação externa do cartão', 422, 'EXTERNAL_CARD_VALIDATION_ERROR');
+            const err = e;
+            if (err.response && [400, 422, 500].includes(err.response.status)) {
+                tx.status = 'DECLINED';
+                tx.gatewayResponse = err.response.data;
+                await tx.save();
+                res.status(err.response.status).json(err.response.data);
+                return;
+            }
+            res.status(502).json({ success: false, error: { message: 'Erro ao processar pagamento externo', code: 'EXTERNAL_API_ERROR' } });
+            return;
         }
-        const gw = await paymentGateway_service_1.paymentGatewayService.processCreditCard({ cardNumber, cardHolderName, expirationMonth, expirationYear, cvv }, tx.amount);
-        tx.status = gw.status;
-        tx.bankTransactionId = gw.gatewayTransactionId;
-        tx.gatewayResponse = gw.details;
+        if (!externalResp) {
+            return;
+        }
+        const extData = externalResp?.data;
+        if (extData?.status === 'AUTHORIZED') {
+            tx.status = 'APPROVED';
+        }
+        else {
+            tx.status = 'DECLINED';
+        }
+        tx.gatewayResponse = extData;
         await tx.save();
-        res.json({ success: gw.success, data: { transaction: tx.toJSON(), status: gw.status, message: gw.message } });
+        res.status(externalResp.status).json(extData);
     }),
     refundPayment: (0, errorHandler_1.asyncHandler)(async (req, res) => {
         const merchantKey = req.merchant.merchantKey;

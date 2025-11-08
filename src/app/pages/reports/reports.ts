@@ -41,8 +41,11 @@ export class ReportsPage {
     this.relatorio = [];
     this.payment.getReport({ from: this.dataInicio, to: this.dataFim }).subscribe({
       next: (resp) => {
-        if (resp.success && Array.isArray(resp.data)) {
-          this.relatorio = resp.data;
+        if (resp.success && resp.data?.transactions) {
+          this.relatorio = resp.data.transactions;
+          if (this.relatorio.length === 0) {
+            this.erro = 'Nenhuma transação encontrada para o período.';
+          }
         } else {
           this.erro = resp.error?.message || 'Erro ao buscar relatório.';
         }

@@ -19,9 +19,9 @@ export class PaymentService {
   constructor(private http: HttpClient) {}
 
     // Relatório de transações por período
-    getReport(params: { from: string; to: string }): Observable<{ success: boolean; data?: any[]; error?: { message: string } }> {
+    getReport(params: { from: string; to: string }): Observable<{ success: boolean; data?: { count: number; transactions: any[]; filters: any }; error?: { message: string } }> {
       const qs = `?from=${encodeURIComponent(params.from)}&to=${encodeURIComponent(params.to)}`;
-      return this.http.get<{ success: boolean; data?: any[]; error?: { message: string } }>(`${this.apiUrl}/payments/report${qs}`);
+      return this.http.get<{ success: boolean; data?: { count: number; transactions: any[]; filters: any }; error?: { message: string } }>(`${this.apiUrl}/payments/report${qs}`);
     }
 
   // Iniciar uma transação de pagamento
@@ -50,12 +50,15 @@ export class PaymentService {
   }
 
   // Obter transações recentes
-  getRecentTransactions(limit = 5): Observable<{ success: boolean; data?: { transactions: Transaction[] } }> {
-    return this.http.get<{ success: boolean; data?: { transactions: Transaction[] } }>(`${this.apiUrl}/payments/recent?limit=${limit}`);
+  getRecentTransactions(limit = 5, merchantId?: string, flow?: 'in'|'out'|'all'): Observable<{ success: boolean; data?: { transactions: Transaction[] } }> {
+    let url = `${this.apiUrl}/payments/recent?limit=${limit}`;
+    if (merchantId) url += `&merchantId=${encodeURIComponent(merchantId)}`;
+    if (flow) url += `&flow=${encodeURIComponent(flow)}`;
+    return this.http.get<{ success: boolean; data?: { transactions: Transaction[] } }>(url);
   }
 
   // Histórico paginado de transações
-  getTransactionHistory(options: { page?: number; limit?: number; status?: string; paymentMethod?: string; sort?: string; direction?: 'asc'|'desc' } = {}): Observable<{ success: boolean; data?: { transactions: Transaction[]; pagination: any; sort: string; direction: string } }> {
+  getTransactionHistory(options: { page?: number; limit?: number; status?: string; paymentMethod?: string; sort?: string; direction?: 'asc'|'desc'; merchantId?: string; flow?: 'in'|'out'|'all' } = {}): Observable<{ success: boolean; data?: { transactions: Transaction[]; pagination: any; sort: string; direction: string } }> {
     const params = new URLSearchParams();
     if (options.page) params.append('page', String(options.page));
     if (options.limit) params.append('limit', String(options.limit));
@@ -63,6 +66,8 @@ export class PaymentService {
     if (options.paymentMethod) params.append('paymentMethod', options.paymentMethod);
     if (options.sort) params.append('sort', options.sort);
     if (options.direction) params.append('direction', options.direction);
+    if (options.merchantId) params.append('merchantId', options.merchantId);
+    if (options.flow) params.append('flow', options.flow);
     const qs = params.toString();
     return this.http.get<{ success: boolean; data?: { transactions: Transaction[]; pagination: any; sort: string; direction: string } }>(`${this.apiUrl}/payments${qs ? '?' + qs : ''}`);
   }

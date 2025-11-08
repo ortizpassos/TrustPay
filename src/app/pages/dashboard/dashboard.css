@@ -10,7 +10,7 @@
 }
 
 /* Layout from Home (TrustPay) */
-.app{display:flex;min-height:100vh;background:var(--bg)}
+.app{display:flex;min-height:100vh;background:var(--bg);align-items:flex-start;}
 /* Fixed sidebar on desktop */
 .sidebar{
   position: fixed;
@@ -84,7 +84,7 @@
 .sidebar-actions .action-icon{font-size:18px}
 
 /* Dashboard specific tweaks (keep original naming) */
-.dashboard-content{padding:2rem}
+.dashboard-content{padding:1rem;overflow-x:auto}
 .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:1.5rem}
 
 .dashboard-card{background:var(--card);border:1px solid #e5e7eb;border-radius:0.5rem;padding:1.5rem;box-shadow:var(--shadow)}
@@ -280,6 +280,32 @@
   font-weight: 600;
   color: #1f2937;
 }
+
+/* Direção e cores dos valores */
+.direction-badge {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: .2px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #374151;
+}
+.direction-badge.in {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+.direction-badge.out {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+.amount-in { color: #166534; }
+.amount-out { color: #991b1b; }
 
 .transaction-status {
   padding: 0.25rem 0.75rem;

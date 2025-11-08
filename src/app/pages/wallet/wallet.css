@@ -1,4 +1,70 @@
 @import '../dashboard/dashboard.css';
+/* Destaque para o saldo em carteira */
+
+.saldo-destaque {
+	background: #f0f8ff;
+	border-radius: 8px;
+	padding: 1.2rem 1rem;
+	margin-bottom: 0.8rem;
+	box-shadow: 0 2px 8px 0 rgba(0,80,180,0.07);
+	border: 2px solid #1976d2;
+	display: flex;
+	align-items: center;
+	gap: 1.2rem;
+}
+.saldo-destaque .label {
+	font-weight: bold;
+	color: #1976d2;
+	font-size: 1.1rem;
+}
+.main {
+  padding-top: 0 !important;
+}
+.dashboard-content {
+  padding-top: 0 !important;
+  
+}
+
+.main {
+	padding-top: 0 !important;
+}
+.topbar {
+	margin-bottom: 0 !important;
+}
+.dashboard-content {
+	padding-top: 0 !important;
+}
+
+.saldo-valor {
+	font-size: 2.1rem;
+	font-weight: bold;
+	color: #1976d2;
+	letter-spacing: 1px;
+}
+
+/* Destaque para A Receber (Pendentes) */
+.pendente-destaque {
+	background: #fff8e1;
+	border-radius: 8px;
+	padding: 1.2rem 1rem;
+	margin-bottom: 1rem;
+	box-shadow: 0 2px 8px 0 rgba(255,180,0,0.07);
+	border: 2px solid #ffb300;
+	display: flex;
+	align-items: center;
+	gap: 1.2rem;
+}
+.pendente-destaque .label {
+	font-weight: bold;
+	color: #ff9800;
+	font-size: 1.1rem;
+}
+.pendente-valor {
+	font-size: 2.1rem;
+	font-weight: bold;
+	color: #ff9800;
+	letter-spacing: 1px;
+}
 
 .placeholder-box { margin-top: 1rem; padding: 1.25rem; border: 1px dashed #888; border-radius: 8px; background: #fafafa; }
 .placeholder-box p { margin: 0; color: #555; font-size: .95rem; }
