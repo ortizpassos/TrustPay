@@ -4,16 +4,16 @@ O frontend do TrustPay é uma aplicação web robusta desenvolvida em **Angular*
 
 ## 🚀 Tecnologias Utilizadas
 
-| Categoria | Tecnologia | Versão Principal | Descrição |
+| Categoria         | Tecnologia | Versão Principal | Descrição |
 | :--- | :--- | :--- | :--- |
-| **Framework** | Angular | 20.3.x | Plataforma para construção de aplicações web. |
-| **Linguagem** | TypeScript | 5.9.x | Superset do JavaScript que adiciona tipagem estática. |
-| **Estilo/UI** | Angular Material | 20.2.x | Componentes de UI de alta qualidade baseados no Material Design. |
+| **Framework**     | Angular | 20.3.x | Plataforma para construção de aplicações web. |
+| **Linguagem**     | TypeScript | 5.9.x | Superset do JavaScript que adiciona tipagem estática. |
+| **Estilo/UI**     | Angular Material | 20.2.x | Componentes de UI de alta qualidade baseados no Material Design. |
 | **Estilo/Layout** | Bootstrap | 5.3.x | Framework CSS para desenvolvimento responsivo. |
-| **Reatividade** | RxJS | 7.8.x | Biblioteca para programação reativa. |
-| **Gráficos** | Chart.js / ng2-charts | 4.5.x / 8.0.x | Visualização de dados e relatórios. |
-| **Relatórios** | jspdf / jspdf-autotable | 2.5.x / 3.8.x | Geração de relatórios em PDF. |
-| **Testes** | Jasmine / Karma | 5.9.x / 6.4.x | Ferramentas para testes unitários. |
+| **Reatividade**   | RxJS | 7.8.x | Biblioteca para programação reativa. |
+| **Gráficos**      | Chart.js / ng2-charts | 4.5.x / 8.0.x | Visualização de dados e relatórios.         |
+| **Relatórios**    | jspdf / jspdf-autotable | 2.5.x / 3.8.x | Geração de relatórios em PDF. |
+| **Testes**        | Jasmine / Karma | 5.9.x / 6.4.x | Ferramentas para testes unitários. |
 
 ## 🗺️ Estrutura de Rotas
 
@@ -122,3 +122,27 @@ As telas a seguir ilustram a interface do usuário e as funcionalidades do Trust
 | ![Área do Desenvolvedor](https://private-us-east-1.manuscdn.com/sessionFile/Wd0H7o6GraKKU8reKP7jr8/sandbox/WXgU6QQlTWRMeXgqrib36j-images_1762642234001_na1fn_L2hvbWUvdWJ1bnR1L1RydXN0UGF5L3NjcmVlbnNob3RzL3NjcmVlbi0wOQ.png?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9wcml2YXRlLXVzLWVhc3QtMS5tYW51c2Nkbi5jb20vc2Vzc2lvbkZpbGUvV2QwSDdvNkdyYUtLVThyZUtQN2pyOC9zYW5kYm94L1dYZ1U2UVFsVFdSTWVYZ3FyaWIzNmotaW1hZ2VzXzE3NjI2NDIyMzQwMDFfbmExZm5fTDJodmJXVXZkV0oxYm5SMUwxUnlkWE4wVUdGNUwzTmpjbVZsYm5Ob2IzUnpMM05qY21WbGJpMHdPUS5wbmciLCJDb25kaXRpb24iOnsiRGF0ZUxlc3NUaGFuIjp7IkFXUzpFcG9jaFRpbWUiOjE3OTg3NjE2MDB9fX1dfQ__&Key-Pair-Id=K2HSFNDJXOU9YS&Signature=nAefz33HvH6fbp1GZ7hO-OXsV4qycEUXbP3g2bY0F1RXIYzHsFu7P8prCee75sttkTIaAXKUOgdg6AnDUWHECXjpXbAdERyEzX48i3ms~InG29QanizN8X41xeKakBDTSMu4Vw6EWX9Jv-mqJ-o4QNtCk1o0GfAs80k9dFHysW4BEbHWEpkuTY7yzgz2xnP6E65Dq7adyGRFZwgOUTahNfdgkPdgCrLjmQWmITRbFADkvGG3ZBB~ubCU1~3uypxI-ENw125p-GPStru00jxqkEkIsL~xYJ2-GtfgRQh0X7bvYGkZhSCEjgo6FGgb0RVos0mgsqeeccCDRjwRC3sm6w__) | |
 
 ***
+gantt
+    title Planejamento de Sprints - TrustPay
+    dateFormat  YYYY-MM-DD
+    section Sprint 1: Estrutura e Autenticação (02/10 - 11/10)
+    Configuração Inicial: 2025-10-02, 2d
+    Desenvolvimento da Landing Page: 2025-10-04, 2d
+    API de Autenticação (Backend): 2025-10-02, 5d
+    Tela de Login/Cadastro (Frontend): 2025-10-06, 5d
+
+    section Sprint 2: Transações e Pagamentos (12/10 - 22/10)
+    API de Pagamentos (Backend): 2025-10-12, 6d
+    Tela de Novo Pagamento (Frontend): 2025-10-18, 4d
+    Tela de Transações (Frontend): 2025-10-22, 3d
+
+    section Sprint 3: Carteira e Relatórios (23/10 - 31/10)
+    API de Carteira (Backend): 2025-10-23, 4d
+    Tela de Carteira (Frontend): 2025-10-27, 3d
+    API de Relatórios (Backend): 2025-10-27, 3d
+    Tela de Relatórios (Frontend): 2025-10-30, 3d
+
+    section Sprint 4: Integração Lojista e Finalização (01/11 - 06/11)
+    API Merchant (Backend): 2025-11-01, 3d
+    Tela Desenvolvedor (Frontend): 2025-11-04, 2d
+    Documentação e Testes Finais: 2025-11-06, 1d
