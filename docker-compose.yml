@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:6.0
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/sistema_pagamentos
+      - ENCRYPTION_KEY=01234567012345670123456701234567
+      - JWT_SECRET=change_this_access
+      - JWT_REFRESH_SECRET=change_this_refresh
+      - FRONTEND_URLS=http://localhost:4200
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
